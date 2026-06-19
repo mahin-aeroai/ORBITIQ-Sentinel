@@ -2,610 +2,786 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ORBITIQ Sentinel — Spacecraft Telemetry Anomaly Detection</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ORBITIQ Sentinel V3 — Mission Operations Center</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --navy:#050d1a;--panel:#0a1628;--border:#1a3254;
-  --cyan:#00d4ff;--orange:#f97316;--green:#22c55e;
-  --red:#ef4444;--amber:#fbbf24;--violet:#a78bfa;
-  --muted:#7dd3fc;--text:#e2e8f0;--mono:'Space Mono',monospace;
+  --bg:#020810;--surface:#060f1e;--panel:#0a1628;--panel2:#0d1f3c;
+  --border:#152840;--border2:#1e3a5f;
+  --cyan:#00d4ff;--cyan2:#0ea5e9;--cyan3:#38bdf8;
+  --orange:#f97316;--orange2:#fb923c;
+  --green:#22c55e;--green2:#4ade80;
+  --red:#ef4444;--red2:#f87171;
+  --amber:#f59e0b;--amber2:#fbbf24;
+  --violet:#8b5cf6;--violet2:#a78bfa;
+  --muted:#64748b;--muted2:#7dd3fc;--muted3:#94a3b8;
+  --text:#e2e8f0;--text2:#cbd5e1;
+  --mono:'Space Mono',monospace;
+  --sans:'Space Grotesk',sans-serif;
 }
-body{background:var(--navy);color:var(--text);font-family:'Space Grotesk',sans-serif}
-.header{background:var(--panel);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
-.logo{font-size:18px;font-weight:700;color:var(--orange);letter-spacing:2px}.logo span{color:var(--cyan)}
-.tagline{font-size:10px;color:var(--muted);letter-spacing:1px;margin-top:2px}
-.hright{display:flex;align-items:center;gap:14px}
-.pill{display:flex;align-items:center;gap:5px;font-size:10px;padding:3px 9px;border-radius:10px;border:0.5px solid;font-weight:500}
-.pill-green{color:var(--green);border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.07)}
-.pill-orange{color:var(--orange);border-color:rgba(249,115,22,.4);background:rgba(249,115,22,.07)}
-.pulse{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.ts{font-size:10px;color:var(--muted);font-family:var(--mono)}
-.main{padding:16px 20px;display:flex;flex-direction:column;gap:14px}
-.mrow{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
-.mcard{background:var(--panel);border:0.5px solid var(--border);border-radius:8px;padding:12px 14px;position:relative;overflow:hidden}
-.mcard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
-.mcard.c-o::before{background:var(--orange)}.mcard.c-c::before{background:var(--cyan)}
-.mcard.c-g::before{background:var(--green)}.mcard.c-r::before{background:var(--red)}
-.mcard.c-v::before{background:var(--violet)}.mcard.c-a::before{background:var(--amber)}
-.mv{font-size:24px;font-weight:700;line-height:1;margin-bottom:3px}
-.ml{font-size:9px;color:var(--muted);letter-spacing:1px;font-weight:500}
-.ms{font-size:9px;color:#1a3254;margin-top:2px;font-family:var(--mono)}
-.r2{display:grid;grid-template-columns:1.5fr 1fr;gap:14px}
-.r3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
-.r22{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.panel{background:var(--panel);border:0.5px solid var(--border);border-radius:10px;padding:14px}
-.ptitle{font-size:10px;font-weight:600;letter-spacing:2px;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:7px}
-.ptitle::before{content:'';display:inline-block;width:3px;height:12px;border-radius:2px;background:var(--orange)}
-.cw{position:relative;width:100%}
-/* Health bars */
-.hg{display:flex;flex-direction:column;gap:9px}
-.hi .hl{display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px}
-.hb{height:5px;background:#0d1f3c;border-radius:3px;overflow:hidden}
-.hf{height:100%;border-radius:3px}
-/* Table */
-.tbl{width:100%;border-collapse:collapse;font-size:11px}
-.tbl th{text-align:left;padding:7px 9px;font-size:9px;letter-spacing:1px;color:var(--muted);border-bottom:0.5px solid var(--border);font-weight:500}
-.tbl td{padding:7px 9px;border-bottom:0.5px solid rgba(26,50,84,.3)}
-.tbl tr:hover td{background:rgba(0,212,255,.02)}
-.badge{display:inline-block;padding:1px 7px;border-radius:8px;font-size:9px;font-family:var(--mono);font-weight:600}
-.bc{background:rgba(239,68,68,.12);color:#fca5a5;border:0.5px solid rgba(239,68,68,.35)}
-.bh{background:rgba(249,115,22,.12);color:#fdba74;border:0.5px solid rgba(249,115,22,.35)}
-.bm{background:rgba(251,191,36,.12);color:#fde68a;border:0.5px solid rgba(251,191,36,.35)}
-.bn{background:rgba(34,197,94,.1);color:#86efac;border:0.5px solid rgba(34,197,94,.3)}
-.bw{background:rgba(251,191,36,.12);color:#fde68a;border:0.5px solid rgba(251,191,36,.35)}
-.sp{display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:500}
-/* Ops log */
-.log-feed{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto}
-.log-entry{display:flex;align-items:flex-start;gap:10px;padding:7px 10px;border-radius:5px;border:0.5px solid;font-size:11px}
-.log-crit{background:rgba(239,68,68,.05);border-color:rgba(239,68,68,.3)}
-.log-warn{background:rgba(251,191,36,.05);border-color:rgba(251,191,36,.3)}
-.log-info{background:rgba(0,212,255,.04);border-color:rgba(0,212,255,.2)}
-.log-time{font-family:var(--mono);font-size:9px;color:var(--muted);white-space:nowrap;margin-top:1px}
-.log-body{flex:1}
-.log-event{font-weight:500;font-size:11px}
-.log-detail{font-size:10px;color:var(--muted);margin-top:1px;font-family:var(--mono)}
-/* Failure modes */
-.fm-grid{display:flex;flex-direction:column;gap:8px}
-.fm-item{background:#050d1a;border:0.5px solid var(--border);border-radius:6px;padding:9px 12px}
-.fm-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
-.fm-name{font-size:10px;font-weight:600;letter-spacing:1px}
-.fm-count{font-family:var(--mono);font-size:9px;color:var(--muted)}
-.fm-modes{display:flex;flex-wrap:wrap;gap:4px}
-.fm-tag{font-size:9px;padding:1px 6px;border-radius:4px;background:#0a1628;border:0.5px solid;font-family:var(--mono)}
-/* Telem stream */
-.telem-grid{display:flex;flex-direction:column;gap:7px}
-.telem-row{display:flex;align-items:center;gap:10px;padding:7px 10px;background:#050d1a;border:0.5px solid var(--border);border-radius:5px}
-.telem-name{font-size:10px;font-family:var(--mono);width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.telem-val{font-size:13px;font-weight:600;font-family:var(--mono);width:80px;text-align:right}
-.telem-spark{flex:1;height:28px}
-.telem-status{width:60px;text-align:right}
-/* Feat bars */
-.fb{display:flex;flex-direction:column;gap:5px}
-.fr{display:flex;align-items:center;gap:7px;font-size:10px}
-.fn{width:175px;color:var(--muted);font-family:var(--mono);font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.fbw{flex:1;height:4px;background:#0d1f3c;border-radius:2px;overflow:hidden}
-.fbf{height:100%;border-radius:2px}
-.fp{width:32px;text-align:right;font-family:var(--mono);font-size:9px}
-.footer{text-align:center;padding:14px;font-size:10px;color:#1a3254;border-top:0.5px solid var(--border);font-family:var(--mono)}
-::-webkit-scrollbar{width:4px}.log-feed::-webkit-scrollbar{width:3px}
-::-webkit-scrollbar-track{background:var(--navy)}.log-feed::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans)}
+
+/* ── TOP BAR ── */
+.topbar{height:52px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px;flex-shrink:0}
+.tb-brand{display:flex;align-items:center;gap:12px}
+.tb-logo{font-size:15px;font-weight:700;letter-spacing:3px;color:var(--orange)}
+.tb-logo span{color:var(--cyan)}
+.tb-sub{font-size:9px;color:var(--muted);letter-spacing:2px;font-family:var(--mono)}
+.tb-metrics{display:flex;align-items:center;gap:6px;flex:1;justify-content:center}
+.tbm{display:flex;flex-direction:column;align-items:center;padding:0 14px;border-right:1px solid var(--border)}
+.tbm:last-child{border-right:none}
+.tbm-val{font-size:15px;font-weight:700;font-family:var(--mono);line-height:1}
+.tbm-lbl{font-size:8px;color:var(--muted);letter-spacing:1px;margin-top:2px;white-space:nowrap}
+.tb-right{display:flex;align-items:center;gap:10px}
+.status-dot{width:6px;height:6px;border-radius:50%;animation:blink 2s infinite}
+.status-dot.green{background:var(--green)}
+.status-dot.red{background:var(--red);box-shadow:0 0 6px var(--red)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.clock{font-family:var(--mono);font-size:10px;color:var(--muted2)}
+
+/* ── LAYOUT ── */
+.workspace{height:calc(100vh - 52px);display:grid;grid-template-columns:260px 1fr 280px;grid-template-rows:1fr 1fr;gap:1px;background:var(--border);overflow:hidden}
+.col-l{grid-row:1/3;display:flex;flex-direction:column;gap:1px}
+.col-c{display:flex;flex-direction:column;gap:1px}
+.col-c-b{display:flex;flex-direction:column;gap:1px}
+.col-r{grid-row:1/3;display:flex;flex-direction:column;gap:1px}
+
+/* ── PANEL BASE ── */
+.pnl{background:var(--panel);padding:12px 14px;overflow:hidden;display:flex;flex-direction:column}
+.pnl-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-shrink:0}
+.pnl-title{font-size:9px;font-weight:600;letter-spacing:2px;color:var(--muted);font-family:var(--mono);display:flex;align-items:center;gap:6px}
+.pnl-title::before{content:'';width:2px;height:10px;border-radius:1px;background:var(--orange);flex-shrink:0}
+.pnl-badge{font-size:8px;padding:2px 7px;border-radius:8px;font-family:var(--mono);font-weight:700}
+.b-red{background:rgba(239,68,68,.12);color:var(--red2);border:0.5px solid rgba(239,68,68,.3)}
+.b-amber{background:rgba(245,158,11,.1);color:var(--amber2);border:0.5px solid rgba(245,158,11,.3)}
+.b-green{background:rgba(34,197,94,.08);color:var(--green2);border:0.5px solid rgba(34,197,94,.25)}
+.b-cyan{background:rgba(0,212,255,.07);color:var(--cyan);border:0.5px solid rgba(0,212,255,.25)}
+.b-violet{background:rgba(139,92,246,.1);color:var(--violet2);border:0.5px solid rgba(139,92,246,.3)}
+.pnl-content{flex:1;overflow:hidden;display:flex;flex-direction:column;gap:7px}
+
+/* ── ORBITAL MAP (placeholder — gorgeous ASCII art as SVG) ── */
+.orbital-wrap{flex:1;background:var(--surface);border-radius:6px;border:0.5px solid var(--border2);overflow:hidden;position:relative;min-height:0}
+.orbital-svg{width:100%;height:100%}
+
+/* ── HEALTH BARS ── */
+.hb-row{display:flex;flex-direction:column;gap:5px}
+.hb-item{display:flex;align-items:center;gap:7px}
+.hb-label{font-size:9px;font-family:var(--mono);color:var(--muted2);width:80px;flex-shrink:0;text-transform:uppercase;letter-spacing:.5px}
+.hb-track{flex:1;height:4px;background:#0d1f3c;border-radius:2px;overflow:hidden}
+.hb-fill{height:100%;border-radius:2px;transition:width .5s}
+.hb-val{font-size:9px;font-family:var(--mono);width:30px;text-align:right}
+.hb-rul{font-size:8px;color:var(--muted);width:40px;text-align:right;font-family:var(--mono)}
+
+/* ── CONJUNCTION CARDS ── */
+.conj-list{display:flex;flex-direction:column;gap:6px}
+.conj-card{background:var(--surface);border:0.5px solid var(--border2);border-radius:6px;padding:9px 11px;position:relative;overflow:hidden}
+.conj-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px}
+.conj-card.high::before{background:var(--red)}
+.conj-card.med::before{background:var(--amber)}
+.conj-card.low::before{background:var(--green)}
+.conj-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.conj-ids{font-size:10px;font-weight:600;font-family:var(--mono);color:var(--text)}
+.conj-vs{color:var(--muted);margin:0 5px;font-size:9px}
+.conj-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px}
+.conj-stat{display:flex;flex-direction:column}
+.conj-stat-val{font-size:10px;font-weight:600;font-family:var(--mono)}
+.conj-stat-lbl{font-size:8px;color:var(--muted);letter-spacing:.5px;margin-top:1px}
+.conj-rec{font-size:9px;color:var(--muted2);margin-top:5px;padding-top:5px;border-top:0.5px solid var(--border);font-family:var(--mono)}
+
+/* ── AI MISSION STATUS ── */
+.mission-card{background:var(--surface);border:0.5px solid var(--border2);border-radius:8px;padding:12px;position:relative;overflow:hidden}
+.mission-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent)}
+.mission-sat-name{font-size:13px;font-weight:700;letter-spacing:2px;color:var(--cyan);font-family:var(--mono);margin-bottom:2px}
+.mission-status-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.mission-status-pill{font-size:9px;padding:2px 8px;border-radius:8px;font-family:var(--mono);font-weight:700}
+.mission-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}
+.mission-stat{background:var(--panel2);border-radius:5px;padding:7px 9px;border:0.5px solid var(--border)}
+.mission-stat-label{font-size:8px;color:var(--muted);letter-spacing:1px;margin-bottom:3px;font-family:var(--mono)}
+.mission-stat-val{font-size:12px;font-weight:600;font-family:var(--mono)}
+.ai-summary{background:rgba(0,212,255,.04);border:0.5px solid rgba(0,212,255,.2);border-radius:5px;padding:8px 10px;font-size:10px;color:var(--muted2);line-height:1.55;font-family:var(--mono)}
+.ai-label{font-size:8px;color:var(--cyan);letter-spacing:2px;margin-bottom:4px}
+
+/* ── PREDICTIVE MAINTENANCE ── */
+.pm-list{display:flex;flex-direction:column;gap:6px}
+.pm-item{background:var(--surface);border-radius:5px;padding:8px 10px;border:0.5px solid var(--border2)}
+.pm-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.pm-name{font-size:10px;font-weight:600;font-family:var(--mono);color:var(--text)}
+.pm-trend{font-size:8px;font-family:var(--mono)}
+.pm-bars{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px}
+.pm-stat{display:flex;flex-direction:column;gap:2px}
+.pm-stat-val{font-size:11px;font-weight:700;font-family:var(--mono)}
+.pm-stat-lbl{font-size:8px;color:var(--muted);letter-spacing:.5px}
+.pm-rec{font-size:9px;color:var(--amber2);margin-top:5px;padding-top:4px;border-top:0.5px solid var(--border);font-family:var(--mono)}
+
+/* ── ROOT CAUSE ── */
+.rc-item{background:var(--surface);border-radius:5px;padding:9px 11px;border:0.5px solid var(--border2);margin-bottom:6px}
+.rc-primary{font-size:10px;font-weight:600;color:var(--red2);font-family:var(--mono);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.rc-secondary{font-size:10px;color:var(--amber2);font-family:var(--mono);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.rc-factors{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+.rc-factor{font-size:8px;padding:1px 6px;border-radius:4px;background:rgba(139,92,246,.1);color:var(--violet2);border:0.5px solid rgba(139,92,246,.3);font-family:var(--mono)}
+.rc-shap{display:flex;flex-direction:column;gap:3px}
+.rc-shap-row{display:flex;align-items:center;gap:6px}
+.rc-shap-label{font-size:8px;color:var(--muted);font-family:var(--mono);width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rc-shap-bar{flex:1;height:4px;background:var(--panel2);border-radius:2px;overflow:hidden}
+.rc-shap-fill{height:100%;border-radius:2px}
+.rc-shap-pct{font-size:8px;font-family:var(--mono);width:28px;text-align:right;color:var(--text)}
+.rc-conf{font-size:9px;color:var(--muted2);font-family:var(--mono);margin-top:5px}
+
+/* ── AUTONOMOUS RECOMMENDATIONS ── */
+.rec-list{display:flex;flex-direction:column;gap:7px}
+.rec-card{background:var(--surface);border-radius:6px;padding:10px 12px;border:0.5px solid var(--border2);position:relative}
+.rec-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px}
+.rec-card.p-high::before{background:var(--red)}
+.rec-card.p-med::before{background:var(--amber)}
+.rec-card.p-low::before{background:var(--cyan)}
+.rec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.rec-id{font-size:9px;font-family:var(--mono);color:var(--muted)}
+.rec-title{font-size:10px;font-weight:600;color:var(--text);margin-bottom:3px}
+.rec-desc{font-size:9px;color:var(--muted3);margin-bottom:6px;line-height:1.5}
+.rec-actions{display:flex;flex-direction:column;gap:2px;margin-bottom:6px}
+.rec-action{font-size:9px;color:var(--muted2);font-family:var(--mono);display:flex;align-items:flex-start;gap:5px}
+.rec-action::before{content:'›';color:var(--cyan);flex-shrink:0}
+.rec-footer{display:flex;align-items:center;gap:8px}
+.rec-conf{font-size:8px;font-family:var(--mono);color:var(--green2)}
+.rec-risk-red{font-size:8px;font-family:var(--mono);color:var(--cyan)}
+
+/* ── SPACE WEATHER ── */
+.sw-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.sw-stat{background:var(--surface);border-radius:5px;padding:7px 9px;border:0.5px solid var(--border2)}
+.sw-val{font-size:16px;font-weight:700;font-family:var(--mono);line-height:1}
+.sw-label{font-size:8px;color:var(--muted);letter-spacing:1px;margin-top:2px}
+.sw-ai{background:rgba(139,92,246,.05);border:0.5px solid rgba(139,92,246,.2);border-radius:5px;padding:8px 10px;font-size:9px;color:var(--muted2);line-height:1.55;font-family:var(--mono)}
+
+/* ── EVENT CORRELATION ── */
+.causal-chain{display:flex;flex-direction:column;align-items:center;gap:0}
+.causal-node{background:var(--panel2);border-radius:5px;padding:6px 14px;font-size:9px;font-family:var(--mono);font-weight:600;text-align:center;border:0.5px solid;width:100%}
+.causal-arrow{font-size:12px;color:var(--border2);line-height:1.2}
+
+/* ── MISSION TIMELINE ── */
+.timeline-wrap{position:relative;height:100%}
+.tl-tabs{display:flex;gap:4px;margin-bottom:8px;flex-shrink:0}
+.tl-tab{font-size:9px;padding:3px 10px;border-radius:10px;border:0.5px solid var(--border);color:var(--muted);cursor:pointer;font-family:var(--mono);font-weight:500;background:transparent}
+.tl-tab.active{background:rgba(0,212,255,.08);border-color:rgba(0,212,255,.3);color:var(--cyan)}
+.tl-chart-wrap{flex:1;min-height:0}
+
+/* ── AI ARCH ── */
+.arch-flow{display:flex;flex-direction:column;gap:3px}
+.arch-node{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:4px;border:0.5px solid var(--border);background:var(--surface)}
+.arch-icon{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.arch-label{font-size:9px;font-family:var(--mono);color:var(--text2)}
+.arch-arrow{text-align:center;font-size:10px;color:var(--border2);line-height:1}
+.arch-active{border-color:rgba(0,212,255,.3);background:rgba(0,212,255,.04)}
+.arch-active .arch-label{color:var(--cyan)}
+
+/* ── SCROLLBARS ── */
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.pnl-content{overflow-y:auto}
+
+/* ── SCAN LINE EFFECT ── */
+@keyframes scanline{0%{top:-10%}100%{top:110%}}
+.scanline{position:absolute;left:0;right:0;height:1px;background:rgba(0,212,255,.06);animation:scanline 6s linear infinite;pointer-events:none}
+
+/* ── NUMBER TICKER ── */
+@keyframes countUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.tbm-val{animation:countUp .6s ease both}
 </style>
 </head>
 <body>
 
-<div class="header">
-  <div>
-    <div class="logo">ORBITIQ <span>SENTINEL</span></div>
-    <div class="tagline">LAYER 5 — AUTONOMOUS SPACECRAFT TELEMETRY ANOMALY DETECTION ENGINE</div>
-  </div>
-  <div class="hright">
-    <div class="pill pill-green"><div class="pulse"></div>MONITORING ACTIVE</div>
-    <div class="pill pill-orange">8 ANOMALIES INJECTED</div>
-    <div class="ts" id="clock"></div>
-  </div>
-</div>
-
-<div class="main">
-
-<!-- METRIC CARDS -->
-<div class="mrow">
-  <div class="mcard c-o"><div class="mv" style="color:var(--orange)">0.984</div><div class="ml">F1 SCORE</div><div class="ms">Detection quality</div></div>
-  <div class="mcard c-c"><div class="mv" style="color:var(--cyan)">1.000</div><div class="ml">PR-AUC</div><div class="ms">Avg precision</div></div>
-  <div class="mcard c-g"><div class="mv" style="color:var(--green)">0.968</div><div class="ml">RECALL</div><div class="ms">Catch rate</div></div>
-  <div class="mcard c-v"><div class="mv" style="color:var(--violet)">1.000</div><div class="ml">PRECISION</div><div class="ms">Zero false alarms</div></div>
-  <div class="mcard c-r"><div class="mv" style="color:var(--red)">329</div><div class="ml">TRUE POSITIVES</div><div class="ms">FP: 0 · FN: 11</div></div>
-  <div class="mcard c-a"><div class="mv" style="color:var(--amber)">18</div><div class="ml">PARAMETERS</div><div class="ms">5 subsystems</div></div>
-</div>
-
-<!-- ROW: Timeline + Health -->
-<div class="r2">
-  <div class="panel">
-    <div class="ptitle">ANOMALY SEVERITY TIMELINE</div>
-    <div class="cw" style="height:200px"><canvas id="timelineChart"></canvas></div>
-  </div>
-  <div class="panel">
-    <div class="ptitle">SUBSYSTEM HEALTH INDEX</div>
-    <div class="hg">
-      <div class="hi">
-        <div class="hl"><span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#f97316">power</span>
-        <span style="font-family:var(--mono);font-size:10px;color:var(--red)">24.0%</span></div>
-        <div class="hb"><div class="hf" style="width:24.0%;background:#ef4444"></div></div>
-      </div><div class="hi">
-        <div class="hl"><span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#ef4444">thermal</span>
-        <span style="font-family:var(--mono);font-size:10px;color:var(--amber)">53.0%</span></div>
-        <div class="hb"><div class="hf" style="width:53.0%;background:#fbbf24"></div></div>
-      </div><div class="hi">
-        <div class="hl"><span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#a78bfa">attitude</span>
-        <span style="font-family:var(--mono);font-size:10px;color:var(--amber)">57.7%</span></div>
-        <div class="hb"><div class="hf" style="width:57.7%;background:#fbbf24"></div></div>
-      </div><div class="hi">
-        <div class="hl"><span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#fbbf24">propulsion</span>
-        <span style="font-family:var(--mono);font-size:10px;color:var(--amber)">54.4%</span></div>
-        <div class="hb"><div class="hf" style="width:54.4%;background:#fbbf24"></div></div>
-      </div><div class="hi">
-        <div class="hl"><span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#22d3ee">comms</span>
-        <span style="font-family:var(--mono);font-size:10px;color:var(--red)">11.6%</span></div>
-        <div class="hb"><div class="hf" style="width:11.6%;background:#ef4444"></div></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ROW: Loss + Distribution + Error -->
-<div class="r3">
-  <div class="panel">
-    <div class="ptitle">TRAINING LOSS CURVE</div>
-    <div class="cw" style="height:160px"><canvas id="lossChart"></canvas></div>
-  </div>
-  <div class="panel">
-    <div class="ptitle">SCORE DISTRIBUTION</div>
-    <div class="cw" style="height:160px"><canvas id="distChart"></canvas></div>
-  </div>
-  <div class="panel">
-    <div class="ptitle">RECONSTRUCTION ERROR</div>
-    <div class="cw" style="height:160px"><canvas id="errorChart"></canvas></div>
-  </div>
-</div>
-
-<!-- ROW: Operations Log + Failure Modes -->
-<div class="r22">
-  <div class="panel">
-    <div class="ptitle">OPERATIONS EVENT LOG</div>
-    <div class="log-feed">
-      <div class="log-entry log-warn">
-        <div class="log-time">T+37:58:00</div>
-        <div class="log-body">
-          <div class="log-event" style="color:var(--amber)">DRIFT DOWN detected</div>
-          <div class="log-detail">param: tank pressure · subsys: propulsion · duration: 73s</div>
-        </div>
-        <span class="badge bw">WARNING</span>
-      </div><div class="log-entry log-warn">
-        <div class="log-time">T+37:56:00</div>
-        <div class="log-body">
-          <div class="log-event" style="color:var(--amber)">DRIFT DOWN detected</div>
-          <div class="log-detail">param: signal strength · subsys: comms · duration: 63s</div>
-        </div>
-        <span class="badge bw">WARNING</span>
-      </div><div class="log-entry log-crit">
-        <div class="log-time">T+37:56:00</div>
-        <div class="log-body">
-          <div class="log-event" style="color:var(--red)">SPIKE detected</div>
-          <div class="log-detail">param: power consumption · subsys: power · duration: 62s</div>
-        </div>
-        <span class="badge bc">CRITICAL</span>
-      </div><div class="log-entry log-warn">
-        <div class="log-time">T+37:54:00</div>
-        <div class="log-body">
-          <div class="log-event" style="color:var(--amber)">OSCILLATION detected</div>
-          <div class="log-detail">param: rw speed z · subsys: attitude · duration: 60s</div>
-        </div>
-        <span class="badge bw">WARNING</span>
-      </div><div class="log-entry log-crit">
-        <div class="log-time">T+36:07:00</div>
-        <div class="log-body">
-          <div class="log-event" style="color:var(--red)">SPIKE detected</div>
-          <div class="log-detail">param: bit error rate · subsys: comms · duration: 89s</div>
-        </div>
-        <span class="badge bc">CRITICAL</span>
-      </div><div class="log-entry log-warn">
-        <div class="log-time">T+34:41:00</div>
-        <div class="log-body">
-          <div class="log-event" style="color:var(--amber)">DRIFT DOWN detected</div>
-          <div class="log-detail">param: battery soc · subsys: power · duration: 80s</div>
-        </div>
-        <span class="badge bw">WARNING</span>
-      </div><div class="log-entry log-warn">
-        <div class="log-time">T+34:16:00</div>
-        <div class="log-body">
-          <div class="log-event" style="color:var(--amber)">OSCILLATION detected</div>
-          <div class="log-detail">param: rw speed x · subsys: attitude · duration: 69s</div>
-        </div>
-        <span class="badge bw">WARNING</span>
-      </div><div class="log-entry log-warn">
-        <div class="log-time">T+34:15:00</div>
-        <div class="log-body">
-          <div class="log-event" style="color:var(--amber)">DRIFT UP detected</div>
-          <div class="log-detail">param: radiator temp · subsys: thermal · duration: 70s</div>
-        </div>
-        <span class="badge bw">WARNING</span>
-      </div>
-      <div class="log-entry log-info">
-        <div class="log-time">T+00:00:00</div>
-        <div class="log-body"><div class="log-event" style="color:var(--cyan)">SYSTEM BOOT — Telemetry ingestion active</div>
-        <div class="log-detail">18 params · 5 subsystems · LSTM Autoencoder loaded · threshold=0.01557</div></div>
-        <span class="badge bn">INFO</span>
-      </div>
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="tb-brand">
+    <div>
+      <div class="tb-logo">ORBITIQ <span>SENTINEL</span> <span style="font-size:10px;color:var(--muted);font-weight:400">V3</span></div>
+      <div class="tb-sub">AUTONOMOUS MISSION OPERATIONS CENTER</div>
     </div>
   </div>
 
-  <div class="panel">
-    <div class="ptitle">FAILURE MODE CATALOGUE</div>
-    <div class="fm-grid">
-      <div class="fm-item">
-        <div class="fm-header">
-          <span class="fm-name" style="color:#f97316">POWER</span>
-          <span class="fm-count">3 failure modes</span>
+  <div class="tb-metrics">
+    <div class="tbm">
+      <div class="tbm-val" style="color:var(--green)" id="mhs">92%</div>
+      <div class="tbm-lbl">MISSION HEALTH</div>
+    </div>
+    <div class="tbm">
+      <div class="tbm-val" style="color:var(--cyan)" id="acts">1,842</div>
+      <div class="tbm-lbl">ACTIVE SATS</div>
+    </div>
+    <div class="tbm">
+      <div class="tbm-val" style="color:var(--muted2)" id="trkd">43,721</div>
+      <div class="tbm-lbl">TRACKED OBJECTS</div>
+    </div>
+    <div class="tbm">
+      <div class="tbm-val" style="color:var(--red)" id="conjs">4</div>
+      <div class="tbm-lbl">HIGH-RISK CONJUNCTIONS</div>
+    </div>
+    <div class="tbm">
+      <div class="tbm-val" style="color:var(--amber)" id="anoms">329</div>
+      <div class="tbm-lbl">OPEN ANOMALIES</div>
+    </div>
+    <div class="tbm">
+      <div class="tbm-val" style="color:var(--orange)" id="pfail">7</div>
+      <div class="tbm-lbl">PREDICTED FAILURES (30D)</div>
+    </div>
+    <div class="tbm">
+      <div class="tbm-val" style="color:var(--violet2)" id="recs">12</div>
+      <div class="tbm-lbl">AUTO RECOMMENDATIONS</div>
+    </div>
+  </div>
+
+  <div class="tb-right">
+    <div class="status-dot green"></div>
+    <span style="font-size:9px;color:var(--muted);font-family:var(--mono)">NOMINAL</span>
+    <div class="clock" id="clk"></div>
+  </div>
+</div>
+
+<!-- WORKSPACE -->
+<div class="workspace">
+
+<!-- ══ LEFT COLUMN ══ -->
+<div class="col-l">
+
+  <!-- ORBITAL AWARENESS -->
+  <div class="pnl" style="flex:1.4">
+    <div class="pnl-hd">
+      <div class="pnl-title">LIVE ORBITAL AWARENESS</div>
+      <span class="pnl-badge b-red">4 THREATS</span>
+    </div>
+    <div class="orbital-wrap">
+      <svg class="orbital-svg" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="earthg" cx="45%" cy="38%">
+            <stop offset="0%" stop-color="#1d4ed8"/>
+            <stop offset="55%" stop-color="#1e3a8a"/>
+            <stop offset="100%" stop-color="#050d1a"/>
+          </radialGradient>
+          <radialGradient id="glow" cx="50%" cy="50%">
+            <stop offset="0%" stop-color="#00d4ff" stop-opacity="0.15"/>
+            <stop offset="100%" stop-color="#00d4ff" stop-opacity="0"/>
+          </radialGradient>
+          <filter id="blur2"><feGaussianBlur stdDeviation="2"/></filter>
+          <filter id="blur1"><feGaussianBlur stdDeviation="1"/></filter>
+        </defs>
+        <!-- atmosphere glow -->
+        <circle cx="120" cy="120" r="68" fill="url(#glow)" filter="url(#blur2)"/>
+        <!-- LEO ring -->
+        <ellipse cx="120" cy="120" rx="85" ry="60" fill="none" stroke="#00d4ff" stroke-width="0.4" stroke-opacity="0.2" stroke-dasharray="2 3"/>
+        <!-- MEO ring -->
+        <ellipse cx="120" cy="120" rx="105" ry="74" fill="none" stroke="#0ea5e9" stroke-width="0.3" stroke-opacity="0.15" stroke-dasharray="1 4"/>
+        <!-- GEO ring -->
+        <ellipse cx="120" cy="120" rx="116" ry="82" fill="none" stroke="#8b5cf6" stroke-width="0.3" stroke-opacity="0.12"/>
+        <!-- Earth -->
+        <circle cx="120" cy="120" r="52" fill="url(#earthg)"/>
+        <!-- continent hints -->
+        <ellipse cx="108" cy="110" rx="12" ry="9" fill="#22c55e" fill-opacity="0.18"/>
+        <ellipse cx="130" cy="106" rx="10" ry="7" fill="#22c55e" fill-opacity="0.14"/>
+        <ellipse cx="118" cy="128" rx="8" ry="5" fill="#22c55e" fill-opacity="0.12"/>
+        <!-- atmosphere rim -->
+        <circle cx="120" cy="120" r="52" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-opacity="0.25"/>
+
+        <!-- Active satellites (cyan dots) -->
+        <circle cx="175" cy="80" r="2.5" fill="#00d4ff" filter="url(#blur1)" opacity="0.9"/>
+        <circle cx="188" cy="118" r="2" fill="#00d4ff" opacity="0.7"/>
+        <circle cx="165" cy="155" r="2" fill="#00d4ff" opacity="0.8"/>
+        <circle cx="72" cy="88" r="2" fill="#00d4ff" opacity="0.7"/>
+        <circle cx="58" cy="130" r="2.5" fill="#00d4ff" filter="url(#blur1)" opacity="0.9"/>
+        <circle cx="88" cy="168" r="2" fill="#00d4ff" opacity="0.6"/>
+        <circle cx="140" cy="60" r="2" fill="#00d4ff" opacity="0.8"/>
+        <circle cx="98" cy="58" r="2" fill="#00d4ff" opacity="0.7"/>
+        <circle cx="186" cy="148" r="2" fill="#00d4ff" opacity="0.6"/>
+        <circle cx="50" cy="105" r="1.5" fill="#00d4ff" opacity="0.5"/>
+
+        <!-- Debris (gray dots) -->
+        <circle cx="150" cy="90" r="1.5" fill="#475569" opacity="0.7"/>
+        <circle cx="92" cy="75" r="1" fill="#475569" opacity="0.6"/>
+        <circle cx="170" cy="140" r="1.5" fill="#475569" opacity="0.6"/>
+        <circle cx="68" cy="152" r="1" fill="#475569" opacity="0.5"/>
+        <circle cx="120" cy="192" r="1.5" fill="#475569" opacity="0.6"/>
+        <circle cx="196" cy="96" r="1" fill="#475569" opacity="0.5"/>
+        <circle cx="44" cy="78" r="1" fill="#475569" opacity="0.4"/>
+        <circle cx="178" cy="170" r="1.5" fill="#475569" opacity="0.5"/>
+
+        <!-- HIGH RISK conjunctions (red, pulsing visual) -->
+        <circle cx="162" cy="98" r="4" fill="#ef4444" fill-opacity="0.15" stroke="#ef4444" stroke-width="0.8"/>
+        <circle cx="162" cy="98" r="2" fill="#ef4444"/>
+        <circle cx="80" cy="142" r="4" fill="#ef4444" fill-opacity="0.15" stroke="#ef4444" stroke-width="0.8"/>
+        <circle cx="80" cy="142" r="2" fill="#ef4444"/>
+        <!-- warning lines -->
+        <line x1="162" y1="98" x2="148" y2="110" stroke="#ef4444" stroke-width="0.6" stroke-opacity="0.5" stroke-dasharray="2 2"/>
+        <line x1="80" y1="142" x2="94" y2="130" stroke="#ef4444" stroke-width="0.6" stroke-opacity="0.5" stroke-dasharray="2 2"/>
+
+        <!-- Ground track arc -->
+        <path d="M 72 88 Q 120 60 188 118" fill="none" stroke="#00d4ff" stroke-width="0.6" stroke-opacity="0.3" stroke-dasharray="3 3"/>
+
+        <!-- ORBITIQ-DEMO-01 highlight -->
+        <circle cx="175" cy="80" r="7" fill="none" stroke="#f97316" stroke-width="0.8" stroke-dasharray="2 2"/>
+        <text x="182" y="75" fill="#f97316" font-size="6" font-family="Space Mono,monospace" opacity="0.9">DEMO-01</text>
+
+        <!-- Legend -->
+        <circle cx="16" cy="218" r="2.5" fill="#00d4ff"/>
+        <text x="22" y="221" fill="#7dd3fc" font-size="6" font-family="Space Mono">Active</text>
+        <circle cx="60" cy="218" r="2.5" fill="#475569"/>
+        <text x="66" y="221" fill="#7dd3fc" font-size="6" font-family="Space Mono">Debris</text>
+        <circle cx="102" cy="218" r="2.5" fill="#ef4444"/>
+        <text x="108" y="221" fill="#7dd3fc" font-size="6" font-family="Space Mono">Threat</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- SPACE WEATHER -->
+  <div class="pnl" style="flex:1">
+    <div class="pnl-hd">
+      <div class="pnl-title">SPACE WEATHER</div>
+      <span class="pnl-badge b-amber">MODERATE</span>
+    </div>
+    <div class="pnl-content">
+      <div class="sw-grid">
+        <div class="sw-stat">
+          <div class="sw-val" style="color:var(--amber)">187</div>
+          <div class="sw-label">SOLAR FLUX (SFU)</div>
         </div>
-        <div class="fm-modes">
-          <span class="fm-tag" style="color:#f97316;border-color:#f9731640">Bus voltage spike</span><span class="fm-tag" style="color:#f97316;border-color:#f9731640">Battery SOC drain</span><span class="fm-tag" style="color:#f97316;border-color:#f9731640">Solar dropout</span>
+        <div class="sw-stat">
+          <div class="sw-val" style="color:var(--orange)">Kp 4.2</div>
+          <div class="sw-label">GEOMAGNETIC</div>
         </div>
-      </div><div class="fm-item">
-        <div class="fm-header">
-          <span class="fm-name" style="color:#ef4444">THERMAL</span>
-          <span class="fm-count">2 failure modes</span>
+        <div class="sw-stat">
+          <div class="sw-val" style="color:var(--green)">G1</div>
+          <div class="sw-label">STORM LEVEL</div>
         </div>
-        <div class="fm-modes">
-          <span class="fm-tag" style="color:#ef4444;border-color:#ef444440">Panel temp drift</span><span class="fm-tag" style="color:#ef4444;border-color:#ef444440">CPU thermal spike</span>
-        </div>
-      </div><div class="fm-item">
-        <div class="fm-header">
-          <span class="fm-name" style="color:#a78bfa">ATTITUDE</span>
-          <span class="fm-count">2 failure modes</span>
-        </div>
-        <div class="fm-modes">
-          <span class="fm-tag" style="color:#a78bfa;border-color:#a78bfa40">RW oscillation</span><span class="fm-tag" style="color:#a78bfa;border-color:#a78bfa40">Pointing error growth</span>
-        </div>
-      </div><div class="fm-item">
-        <div class="fm-header">
-          <span class="fm-name" style="color:#fbbf24">PROPULSION</span>
-          <span class="fm-count">2 failure modes</span>
-        </div>
-        <div class="fm-modes">
-          <span class="fm-tag" style="color:#fbbf24;border-color:#fbbf2440">Tank pressure drift</span><span class="fm-tag" style="color:#fbbf24;border-color:#fbbf2440">Fuel loss</span>
-        </div>
-      </div><div class="fm-item">
-        <div class="fm-header">
-          <span class="fm-name" style="color:#22d3ee">COMMS</span>
-          <span class="fm-count">2 failure modes</span>
-        </div>
-        <div class="fm-modes">
-          <span class="fm-tag" style="color:#22d3ee;border-color:#22d3ee40">Signal strength degradation</span><span class="fm-tag" style="color:#22d3ee;border-color:#22d3ee40">BER spike</span>
+        <div class="sw-stat">
+          <div class="sw-val" style="color:var(--red)">+12%</div>
+          <div class="sw-label">DRAG INCREASE</div>
         </div>
       </div>
-    </div>
-  </div>
-</div>
-
-<!-- LIVE TELEMETRY STREAM -->
-<div class="panel">
-  <div class="ptitle">LIVE TELEMETRY STREAM — KEY PARAMETERS</div>
-  <div class="telem-grid" id="telemGrid">
-    <div class="telem-row">
-      <div class="telem-name">power bus voltage</div>
-      <canvas class="telem-spark" id="spark_0"></canvas>
-      <div class="telem-val" style="color:#f97316" id="val_0">26.86</div>
-      <div class="telem-status"><span class="badge bn">NOMINAL</span></div>
-    </div><div class="telem-row">
-      <div class="telem-name">thermal cpu temp</div>
-      <canvas class="telem-spark" id="spark_1"></canvas>
-      <div class="telem-val" style="color:#ef4444" id="val_1">53.29</div>
-      <div class="telem-status"><span class="badge bc">ALERT</span></div>
-    </div><div class="telem-row">
-      <div class="telem-name">attitude rw speed x</div>
-      <canvas class="telem-spark" id="spark_2"></canvas>
-      <div class="telem-val" style="color:#a78bfa" id="val_2">916.03</div>
-      <div class="telem-status"><span class="badge bc">ALERT</span></div>
-    </div><div class="telem-row">
-      <div class="telem-name">comms signal strength</div>
-      <canvas class="telem-spark" id="spark_3"></canvas>
-      <div class="telem-val" style="color:#22d3ee" id="val_3">-93.92</div>
-      <div class="telem-status"><span class="badge bc">ALERT</span></div>
-    </div><div class="telem-row">
-      <div class="telem-name">propulsion tank pressure</div>
-      <canvas class="telem-spark" id="spark_4"></canvas>
-      <div class="telem-val" style="color:#fbbf24" id="val_4">214.39</div>
-      <div class="telem-status"><span class="badge bn">NOMINAL</span></div>
-    </div>
-  </div>
-</div>
-
-<!-- ANOMALY TABLE -->
-<div class="panel">
-  <div class="ptitle">TOP ANOMALY EVENTS — EXPLAINABILITY REPORT</div>
-  <table class="tbl">
-    <thead><tr><th>RANK</th><th>SAMPLE</th><th>SEVERITY</th><th>STATUS</th><th>PRIMARY FAULT</th><th>SUBSYSTEM</th><th>CONTRIBUTION</th><th>SECONDARY FAULT</th></tr></thead>
-    <tbody>
-      <tr>
-        <td style="color:var(--muted);font-family:var(--mono)">#01</td>
-        <td style="font-family:var(--mono)">0278</td>
-        <td><span class="badge bm">26.2</span></td>
-        <td style="color:var(--red)">ANOMALY</td>
-        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
-        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
-        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">43.3%</td>
-        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
-      </tr><tr>
-        <td style="color:var(--muted);font-family:var(--mono)">#02</td>
-        <td style="font-family:var(--mono)">0279</td>
-        <td><span class="badge bm">26.2</span></td>
-        <td style="color:var(--red)">ANOMALY</td>
-        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
-        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
-        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">42.6%</td>
-        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
-      </tr><tr>
-        <td style="color:var(--muted);font-family:var(--mono)">#03</td>
-        <td style="font-family:var(--mono)">0280</td>
-        <td><span class="badge bm">26.1</span></td>
-        <td style="color:var(--red)">ANOMALY</td>
-        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
-        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
-        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">42.0%</td>
-        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
-      </tr><tr>
-        <td style="color:var(--muted);font-family:var(--mono)">#04</td>
-        <td style="font-family:var(--mono)">0281</td>
-        <td><span class="badge bm">26.1</span></td>
-        <td style="color:var(--red)">ANOMALY</td>
-        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
-        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
-        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">41.3%</td>
-        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
-      </tr><tr>
-        <td style="color:var(--muted);font-family:var(--mono)">#05</td>
-        <td style="font-family:var(--mono)">0282</td>
-        <td><span class="badge bm">26.0</span></td>
-        <td style="color:var(--red)">ANOMALY</td>
-        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
-        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
-        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">40.8%</td>
-        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
-      </tr><tr>
-        <td style="color:var(--muted);font-family:var(--mono)">#06</td>
-        <td style="font-family:var(--mono)">0283</td>
-        <td><span class="badge bm">26.0</span></td>
-        <td style="color:var(--red)">ANOMALY</td>
-        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
-        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
-        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">40.1%</td>
-        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
-      </tr><tr>
-        <td style="color:var(--muted);font-family:var(--mono)">#07</td>
-        <td style="font-family:var(--mono)">0277</td>
-        <td><span class="badge bm">25.9</span></td>
-        <td style="color:var(--red)">ANOMALY</td>
-        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
-        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
-        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">44.0%</td>
-        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
-      </tr><tr>
-        <td style="color:var(--muted);font-family:var(--mono)">#08</td>
-        <td style="font-family:var(--mono)">0284</td>
-        <td><span class="badge bm">25.9</span></td>
-        <td style="color:var(--red)">ANOMALY</td>
-        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
-        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
-        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">39.4%</td>
-        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
-      </tr><tr>
-        <td style="color:var(--muted);font-family:var(--mono)">#09</td>
-        <td style="font-family:var(--mono)">0285</td>
-        <td><span class="badge bm">25.6</span></td>
-        <td style="color:var(--red)">ANOMALY</td>
-        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
-        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
-        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">38.9%</td>
-        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
-      </tr><tr>
-        <td style="color:var(--muted);font-family:var(--mono)">#10</td>
-        <td style="font-family:var(--mono)">0286</td>
-        <td><span class="badge bm">25.5</span></td>
-        <td style="color:var(--red)">ANOMALY</td>
-        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
-        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
-        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">38.5%</td>
-        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
-      </tr><tr>
-        <td style="color:var(--muted);font-family:var(--mono)">#11</td>
-        <td style="font-family:var(--mono)">0276</td>
-        <td><span class="badge bm">25.4</span></td>
-        <td style="color:var(--red)">ANOMALY</td>
-        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
-        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
-        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">44.3%</td>
-        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
-      </tr><tr>
-        <td style="color:var(--muted);font-family:var(--mono)">#12</td>
-        <td style="font-family:var(--mono)">0287</td>
-        <td><span class="badge bm">25.4</span></td>
-        <td style="color:var(--red)">ANOMALY</td>
-        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
-        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
-        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">37.6%</td>
-        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
-      </tr><tr>
-        <td style="color:var(--muted);font-family:var(--mono)">#13</td>
-        <td style="font-family:var(--mono)">0288</td>
-        <td><span class="badge bm">25.2</span></td>
-        <td style="color:var(--red)">ANOMALY</td>
-        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
-        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
-        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">37.2%</td>
-        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
-      </tr><tr>
-        <td style="color:var(--muted);font-family:var(--mono)">#14</td>
-        <td style="font-family:var(--mono)">0289</td>
-        <td><span class="badge bm">25.2</span></td>
-        <td style="color:var(--red)">ANOMALY</td>
-        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
-        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
-        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">36.7%</td>
-        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
-      </tr><tr>
-        <td style="color:var(--muted);font-family:var(--mono)">#15</td>
-        <td style="font-family:var(--mono)">0290</td>
-        <td><span class="badge bn">25.0</span></td>
-        <td style="color:var(--red)">ANOMALY</td>
-        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
-        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
-        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">35.9%</td>
-        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-
-<!-- FEATURE EXPLAINABILITY + MISSION TIMELINE -->
-<div class="r22">
-  <div class="panel">
-    <div class="ptitle">FEATURE CONTRIBUTION — TOP ANOMALY</div>
-    <div style="font-size:10px;color:var(--muted);margin-bottom:10px;font-family:var(--mono)">
-      Sample #0278 · Severity 26.2/100 · LSTM reconstruction decomposition
-    </div>
-    <div class="fb">
-      <div class="fr">
-        <div class="fn">power_power_consumption</div>
-        <div class="fbw"><div class="fbf" style="width:43.3%;background:#f97316"></div></div>
-        <div class="fp">43.3%</div>
-        <span class="sp" style="font-size:8px;padding:1px 5px;color:#f97316;border:0.5px solid #f9731640;background:rgba(0,0,0,.3)">power</span>
-      </div><div class="fr">
-        <div class="fn">comms_signal_strength</div>
-        <div class="fbw"><div class="fbf" style="width:14.8%;background:#22d3ee"></div></div>
-        <div class="fp">14.8%</div>
-        <span class="sp" style="font-size:8px;padding:1px 5px;color:#22d3ee;border:0.5px solid #22d3ee40;background:rgba(0,0,0,.3)">comms</span>
-      </div><div class="fr">
-        <div class="fn">propulsion_tank_pressure</div>
-        <div class="fbw"><div class="fbf" style="width:9.1%;background:#fbbf24"></div></div>
-        <div class="fp">9.1%</div>
-        <span class="sp" style="font-size:8px;padding:1px 5px;color:#fbbf24;border:0.5px solid #fbbf2440;background:rgba(0,0,0,.3)">propulsion</span>
+      <div class="sw-ai">
+        <div style="font-size:7px;color:var(--cyan);letter-spacing:2px;margin-bottom:4px">AI IMPACT ASSESSMENT</div>
+        Elevated solar flux causing 12% atmospheric drag increase at 400km. Orbit decay acceleration: 8m/day above baseline. Radiation belt enhancement may affect GEO assets. Recommend orbit correction planning within 72 hours.
       </div>
     </div>
   </div>
 
-  <div class="panel">
-    <div class="ptitle">MISSION TIMELINE</div>
-    <div class="cw" style="height:180px"><canvas id="missionChart"></canvas></div>
+</div><!-- /col-l -->
+
+<!-- ══ CENTER TOP ══ -->
+<div class="col-c">
+
+  <!-- AI MISSION STATUS -->
+  <div class="pnl">
+    <div class="pnl-hd">
+      <div class="pnl-title">AI MISSION STATUS — ORBITIQ-DEMO-01</div>
+      <span class="pnl-badge b-amber">ATTENTION REQUIRED</span>
+    </div>
+    <div class="pnl-content" style="flex-direction:row;gap:10px">
+      <div style="flex:1">
+        <div class="mission-card">
+          <div class="mission-sat-name">ORBITIQ-DEMO-01</div>
+          <div class="mission-status-row">
+            <span class="mission-status-pill" style="background:rgba(245,158,11,.12);color:var(--amber2);border:0.5px solid rgba(245,158,11,.3)">OPERATIONAL — DEGRADED</span>
+          </div>
+          <div class="mission-grid">
+            <div class="mission-stat">
+              <div class="mission-stat-label">POWER HEALTH</div>
+              <div class="mission-stat-val" style="color:var(--red)">24% CRITICAL</div>
+            </div>
+            <div class="mission-stat">
+              <div class="mission-stat-label">COMMUNICATIONS</div>
+              <div class="mission-stat-val" style="color:var(--green)">NOMINAL</div>
+            </div>
+            <div class="mission-stat">
+              <div class="mission-stat-label">THERMAL</div>
+              <div class="mission-stat-val" style="color:var(--amber)">STABLE</div>
+            </div>
+            <div class="mission-stat">
+              <div class="mission-stat-label">PROPULSION</div>
+              <div class="mission-stat-val" style="color:var(--orange)">DEGRADING</div>
+            </div>
+            <div class="mission-stat">
+              <div class="mission-stat-label">MISSION IMPACT</div>
+              <div class="mission-stat-val" style="color:var(--amber)">MODERATE</div>
+            </div>
+            <div class="mission-stat">
+              <div class="mission-stat-label">PRED FAILURE</div>
+              <div class="mission-stat-val" style="color:var(--red)">18 ± 3 DAYS</div>
+            </div>
+          </div>
+          <div class="ai-summary">
+            <div class="ai-label">AI REASONING — CONFIDENCE 94%</div>
+            Battery internal resistance increased 340% over 72h, consistent with accelerated Li-ion degradation under thermal cycling. Solar panel output declining at 0.8%/day. Recommend immediate power budget review and payload duty cycle reduction. Conjunction risk with DEBRIS-66721 in 2.6 days adds operational pressure.
+          </div>
+        </div>
+      </div>
+      <!-- Digital Twin Schematic -->
+      <div style="width:160px;flex-shrink:0">
+        <div style="font-size:8px;color:var(--muted);letter-spacing:2px;font-family:var(--mono);margin-bottom:8px">DIGITAL TWIN</div>
+        <svg viewBox="0 0 150 220" width="150" height="220">
+          <!-- Spacecraft body -->
+          <rect x="45" y="60" width="60" height="80" rx="4" fill="#0a1628" stroke="#1e3a5f" stroke-width="1"/>
+          <!-- Solar panels -->
+          <rect x="4" y="80" width="38" height="14" rx="2" fill="#1e40af" fill-opacity="0.4" stroke="#3b82f6" stroke-width="0.8"/>
+          <rect x="108" y="80" width="38" height="14" rx="2" fill="#1e40af" fill-opacity="0.4" stroke="#3b82f6" stroke-width="0.8"/>
+          <!-- Panel heat indicator -->
+          <rect x="4" y="80" width="38" height="14" rx="2" fill="#ef4444" fill-opacity="0.15"/>
+          <!-- Antenna -->
+          <line x1="75" y1="60" x2="75" y2="40" stroke="#00d4ff" stroke-width="1.2"/>
+          <circle cx="75" cy="38" r="4" fill="none" stroke="#00d4ff" stroke-width="0.8"/>
+          <!-- Thruster nozzles -->
+          <rect x="55" y="140" width="10" height="6" rx="1" fill="#475569"/>
+          <rect x="85" y="140" width="10" height="6" rx="1" fill="#475569"/>
+          <!-- Payload -->
+          <rect x="58" y="72" width="34" height="20" rx="2" fill="#0d1f3c" stroke="#1e3a5f" stroke-width="0.8"/>
+
+          <!-- Subsystem health dots -->
+          <!-- Power - RED -->
+          <circle cx="48" cy="70" r="4" fill="#ef4444"/>
+          <text x="55" y="73" fill="#ef4444" font-size="6" font-family="Space Mono">PWR 24%</text>
+          <!-- Thermal - AMBER -->
+          <circle cx="48" cy="90" r="4" fill="#f59e0b"/>
+          <text x="55" y="93" fill="#fbbf24" font-size="6" font-family="Space Mono">THRM OK</text>
+          <!-- Comms - GREEN -->
+          <circle cx="48" cy="110" r="4" fill="#22c55e"/>
+          <text x="55" y="113" fill="#4ade80" font-size="6" font-family="Space Mono">COM NOM</text>
+          <!-- Propulsion - ORANGE -->
+          <circle cx="48" cy="130" r="4" fill="#f97316"/>
+          <text x="55" y="133" fill="#fb923c" font-size="6" font-family="Space Mono">PROP DEG</text>
+
+          <!-- RUL bar -->
+          <rect x="20" y="170" width="110" height="5" rx="2" fill="#0d1f3c"/>
+          <rect x="20" y="170" width="33" height="5" rx="2" fill="#ef4444"/>
+          <text x="75" y="185" text-anchor="middle" fill="#7dd3fc" font-size="7" font-family="Space Mono">RUL: 18 DAYS</text>
+
+          <!-- Orbital altitude indicator -->
+          <text x="75" y="205" text-anchor="middle" fill="#64748b" font-size="6" font-family="Space Mono">ALT: 412km · INC: 51.6°</text>
+        </svg>
+      </div>
+    </div>
   </div>
-</div>
 
-</div>
+  <!-- CONJUNCTION RISK + TIMELINE tabs -->
+  <div class="pnl">
+    <div class="pnl-hd">
+      <div class="pnl-title">CONJUNCTION RISK & MISSION TIMELINE</div>
+      <div class="tl-tabs">
+        <div class="tl-tab active" onclick="switchTab('conj')">CONJUNCTIONS</div>
+        <div class="tl-tab" onclick="switchTab('tl')">TIMELINE</div>
+        <div class="tl-tab" onclick="switchTab('arch')">AI ARCH</div>
+      </div>
+    </div>
+    <div class="pnl-content" id="tabConj">
+      <div class="conj-list">
+        <div class="conj-card high">
+          <div class="conj-header">
+            <div class="conj-ids"><span style="color:var(--cyan)">STARLINK-7218</span><span class="conj-vs">vs</span><span style="color:var(--red2)">DEBRIS-66721</span></div>
+            <span class="pnl-badge b-red">HIGH RISK</span>
+          </div>
+          <div class="conj-grid">
+            <div class="conj-stat"><div class="conj-stat-val" style="color:var(--red)">2d 14h</div><div class="conj-stat-lbl">TCA</div></div>
+            <div class="conj-stat"><div class="conj-stat-val" style="color:var(--amber)">420 m</div><div class="conj-stat-lbl">MISS DIST</div></div>
+            <div class="conj-stat"><div class="conj-stat-val" style="color:var(--red)">1.8E-4</div><div class="conj-stat-lbl">Pc</div></div>
+          </div>
+          <div class="conj-rec">› RECOMMENDED: 0.32 m/s radial burn at T-36h</div>
+        </div>
+        <div class="conj-card high">
+          <div class="conj-header">
+            <div class="conj-ids"><span style="color:var(--cyan)">ORBITIQ-DEMO-01</span><span class="conj-vs">vs</span><span style="color:var(--red2)">DEBRIS-66721</span></div>
+            <span class="pnl-badge b-red">HIGH RISK</span>
+          </div>
+          <div class="conj-grid">
+            <div class="conj-stat"><div class="conj-stat-val" style="color:var(--red)">2d 19h</div><div class="conj-stat-lbl">TCA</div></div>
+            <div class="conj-stat"><div class="conj-stat-val" style="color:var(--red)">380 m</div><div class="conj-stat-lbl">MISS DIST</div></div>
+            <div class="conj-stat"><div class="conj-stat-val" style="color:var(--red)">2.1E-4</div><div class="conj-stat-lbl">Pc</div></div>
+          </div>
+          <div class="conj-rec">› RECOMMENDED: 0.41 m/s radial burn at T-48h · Evaluate power budget first</div>
+        </div>
+        <div class="conj-card med">
+          <div class="conj-header">
+            <div class="conj-ids"><span style="color:var(--cyan)">NAVIC-1F</span><span class="conj-vs">vs</span><span style="color:var(--amber)">SL-16 R/B</span></div>
+            <span class="pnl-badge b-amber">MEDIUM</span>
+          </div>
+          <div class="conj-grid">
+            <div class="conj-stat"><div class="conj-stat-val" style="color:var(--amber)">6d 2h</div><div class="conj-stat-lbl">TCA</div></div>
+            <div class="conj-stat"><div class="conj-stat-val" style="color:var(--green)">1.4 km</div><div class="conj-stat-lbl">MISS DIST</div></div>
+            <div class="conj-stat"><div class="conj-stat-val" style="color:var(--amber)">3.2E-5</div><div class="conj-stat-lbl">Pc</div></div>
+          </div>
+          <div class="conj-rec">› MONITOR: Update CDM in 48h. No maneuver required at current Pc.</div>
+        </div>
+        <div class="conj-card low">
+          <div class="conj-header">
+            <div class="conj-ids"><span style="color:var(--cyan)">IRNSS-1G</span><span class="conj-vs">vs</span><span style="color:var(--muted2)">COSMOS-2251 DEB</span></div>
+            <span class="pnl-badge b-green">LOW</span>
+          </div>
+          <div class="conj-grid">
+            <div class="conj-stat"><div class="conj-stat-val" style="color:var(--green)">9d 7h</div><div class="conj-stat-lbl">TCA</div></div>
+            <div class="conj-stat"><div class="conj-stat-val" style="color:var(--green)">4.2 km</div><div class="conj-stat-lbl">MISS DIST</div></div>
+            <div class="conj-stat"><div class="conj-stat-val" style="color:var(--green)">8.1E-6</div><div class="conj-stat-lbl">Pc</div></div>
+          </div>
+          <div class="conj-rec">› ROUTINE MONITORING. No action required.</div>
+        </div>
+      </div>
+    </div>
+    <div class="pnl-content" id="tabTl" style="display:none">
+      <div class="tl-tabs" style="margin-bottom:6px">
+        <div class="tl-tab active">24H</div>
+        <div class="tl-tab">7D</div>
+        <div class="tl-tab">30D</div>
+      </div>
+      <div class="tl-chart-wrap" style="height:200px"><canvas id="tlChart"></canvas></div>
+    </div>
+    <div class="pnl-content" id="tabArch" style="display:none">
+      <div style="font-size:9px;color:var(--muted);font-family:var(--mono);margin-bottom:8px">REAL-TIME AI DATA FLOW — ORBITIQ-DEMO-01</div>
+      <div class="arch-flow">
+        <div class="arch-node arch-active"><div class="arch-icon" style="background:var(--cyan)"></div><div class="arch-label">Telemetry Ingestion (18 params · 1 Hz)</div></div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-node arch-active"><div class="arch-icon" style="background:var(--cyan)"></div><div class="arch-label">Feature Engineering · Normalization · Windowing (60s)</div></div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-node arch-active"><div class="arch-icon" style="background:var(--orange)"></div><div class="arch-label">LSTM Autoencoder · Reconstruction Error</div></div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-node arch-active"><div class="arch-icon" style="background:var(--orange)"></div><div class="arch-label">Anomaly Detection · Severity 0–100 · F1=0.984</div></div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-node"><div class="arch-icon" style="background:var(--violet)"></div><div class="arch-label">Root Cause Analysis · SHAP Attribution</div></div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-node"><div class="arch-icon" style="background:var(--violet)"></div><div class="arch-label">Digital Twin · Subsystem Simulation</div></div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-node"><div class="arch-icon" style="background:var(--green)"></div><div class="arch-label">Recommendation Engine · LLM Reasoning</div></div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-node"><div class="arch-icon" style="background:var(--green)"></div><div class="arch-label">Mission Operator Decision Support</div></div>
+      </div>
+    </div>
+  </div>
 
-<div class="footer">
-  ORBITIQ SENTINEL v1.0 · LSTM AUTOENCODER · F1=0.984 · PRECISION=1.0 · RECALL=0.968 · 18 PARAMS · 5 SUBSYSTEMS · MAHIN NANDIPA
-</div>
+</div><!-- /col-c -->
+
+<!-- ══ RIGHT COLUMN ══ -->
+<div class="col-r">
+
+  <!-- PREDICTIVE MAINTENANCE -->
+  <div class="pnl" style="flex:1">
+    <div class="pnl-hd">
+      <div class="pnl-title">PREDICTIVE MAINTENANCE</div>
+      <span class="pnl-badge b-red">3 CRITICAL</span>
+    </div>
+    <div class="pnl-content">
+      <div class="hb-row" style="margin-bottom:8px">
+        <div class="hb-item"><div class="hb-label">Power</div><div class="hb-track"><div class="hb-fill" style="width:24%;background:#ef4444"></div></div><div class="hb-val" style="color:var(--red)">24%</div><div class="hb-rul" style="color:var(--red)">18d</div></div>
+        <div class="hb-item"><div class="hb-label">Comms</div><div class="hb-track"><div class="hb-fill" style="width:53%;background:#fbbf24"></div></div><div class="hb-val" style="color:var(--amber)">53%</div><div class="hb-rul" style="color:var(--muted)">41d</div></div>
+        <div class="hb-item"><div class="hb-label">Attitude</div><div class="hb-track"><div class="hb-fill" style="width:58%;background:#fbbf24"></div></div><div class="hb-val" style="color:var(--amber)">58%</div><div class="hb-rul" style="color:var(--muted)">55d</div></div>
+        <div class="hb-item"><div class="hb-label">Propulsion</div><div class="hb-track"><div class="hb-fill" style="width:54%;background:#fbbf24"></div></div><div class="hb-val" style="color:var(--amber)">54%</div><div class="hb-rul" style="color:var(--muted)">48d</div></div>
+        <div class="hb-item"><div class="hb-label">Thermal</div><div class="hb-track"><div class="hb-fill" style="width:78%;background:#22c55e"></div></div><div class="hb-val" style="color:var(--green)">78%</div><div class="hb-rul" style="color:var(--muted)">90d</div></div>
+      </div>
+      <div class="pm-list">
+        <div class="pm-item">
+          <div class="pm-header"><div class="pm-name">Reaction Wheel #2</div><div class="pm-trend" style="color:var(--red)">▼ DEGRADING</div></div>
+          <div class="pm-bars">
+            <div class="pm-stat"><div class="pm-stat-val" style="color:var(--amber)">61%</div><div class="pm-stat-lbl">HEALTH</div></div>
+            <div class="pm-stat"><div class="pm-stat-val" style="color:var(--red)">78%</div><div class="pm-stat-lbl">FAIL PROB</div></div>
+            <div class="pm-stat"><div class="pm-stat-val" style="color:var(--orange)">24d</div><div class="pm-stat-lbl">RUL</div></div>
+          </div>
+          <div class="pm-rec">› Reduce spin-up frequency. Inspect bearing assembly.</div>
+        </div>
+        <div class="pm-item">
+          <div class="pm-header"><div class="pm-name">Battery Cell Array</div><div class="pm-trend" style="color:var(--red)">▼ CRITICAL</div></div>
+          <div class="pm-bars">
+            <div class="pm-stat"><div class="pm-stat-val" style="color:var(--red)">24%</div><div class="pm-stat-lbl">HEALTH</div></div>
+            <div class="pm-stat"><div class="pm-stat-val" style="color:var(--red)">91%</div><div class="pm-stat-lbl">FAIL PROB</div></div>
+            <div class="pm-stat"><div class="pm-stat-val" style="color:var(--red)">18d</div><div class="pm-stat-lbl">RUL</div></div>
+          </div>
+          <div class="pm-rec">› Enable balancing mode. Reduce payload duty cycle 15%.</div>
+        </div>
+        <div class="pm-item">
+          <div class="pm-header"><div class="pm-name">Thruster Valve #1</div><div class="pm-trend" style="color:var(--amber)">▼ WARNING</div></div>
+          <div class="pm-bars">
+            <div class="pm-stat"><div class="pm-stat-val" style="color:var(--amber)">47%</div><div class="pm-stat-lbl">HEALTH</div></div>
+            <div class="pm-stat"><div class="pm-stat-val" style="color:var(--amber)">52%</div><div class="pm-stat-lbl">FAIL PROB</div></div>
+            <div class="pm-stat"><div class="pm-stat-val" style="color:var(--amber)">36d</div><div class="pm-stat-lbl">RUL</div></div>
+          </div>
+          <div class="pm-rec">› Monitor propellant flow rate. Schedule valve inspection.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROOT CAUSE -->
+  <div class="pnl" style="flex:0.85">
+    <div class="pnl-hd">
+      <div class="pnl-title">ROOT CAUSE INTELLIGENCE</div>
+      <span class="pnl-badge b-violet">CONF 96%</span>
+    </div>
+    <div class="pnl-content">
+      <div class="rc-item">
+        <div class="rc-primary"><span style="color:var(--red2)">PRIMARY</span> Battery Internal Resistance +340%</div>
+        <div class="rc-secondary"><span style="color:var(--amber2)">SECONDARY</span> Solar Panel Output −18%</div>
+        <div class="rc-factors">
+          <span class="rc-factor">Thermal Cycling</span>
+          <span class="rc-factor">Radiation Exposure</span>
+          <span class="rc-factor">Eclipse Duration ↑</span>
+          <span class="rc-factor">Overcharge Events</span>
+        </div>
+        <div class="rc-shap">
+          <div class="rc-shap-row"><div class="rc-shap-label">battery_soc</div><div class="rc-shap-bar"><div class="rc-shap-fill" style="width:82%;background:#ef4444"></div></div><div class="rc-shap-pct">82%</div></div>
+          <div class="rc-shap-row"><div class="rc-shap-label">bus_voltage</div><div class="rc-shap-bar"><div class="rc-shap-fill" style="width:61%;background:#f97316"></div></div><div class="rc-shap-pct">61%</div></div>
+          <div class="rc-shap-row"><div class="rc-shap-label">solar_current</div><div class="rc-shap-bar"><div class="rc-shap-fill" style="width:45%;background:#f59e0b"></div></div><div class="rc-shap-pct">45%</div></div>
+          <div class="rc-shap-row"><div class="rc-shap-label">battery_temp</div><div class="rc-shap-bar"><div class="rc-shap-fill" style="width:33%;background:#8b5cf6"></div></div><div class="rc-shap-pct">33%</div></div>
+          <div class="rc-shap-row"><div class="rc-shap-label">panel_temp</div><div class="rc-shap-bar"><div class="rc-shap-fill" style="width:21%;background:#0ea5e9"></div></div><div class="rc-shap-pct">21%</div></div>
+        </div>
+        <div class="rc-conf">LSTM reconstruction error: 0.0428 (threshold: 0.0156) · SHAP confidence: 96%</div>
+      </div>
+
+      <!-- Causal Chain -->
+      <div style="font-size:8px;color:var(--muted);letter-spacing:2px;font-family:var(--mono);margin-bottom:6px">CAUSAL CHAIN</div>
+      <div class="causal-chain">
+        <div class="causal-node" style="color:var(--amber2);border-color:rgba(245,158,11,.3)">Solar Flux +187 SFU</div>
+        <div class="causal-arrow">↓</div>
+        <div class="causal-node" style="color:var(--orange);border-color:rgba(249,115,22,.3)">Power Fluctuation → Overcharge</div>
+        <div class="causal-arrow">↓</div>
+        <div class="causal-node" style="color:var(--red2);border-color:rgba(239,68,68,.3)">Battery Cell Stress → IR ↑340%</div>
+        <div class="causal-arrow">↓</div>
+        <div class="causal-node" style="color:var(--orange2);border-color:rgba(251,146,60,.3)">Thermal Increase → Cycling</div>
+        <div class="causal-arrow">↓</div>
+        <div class="causal-node" style="color:var(--amber2);border-color:rgba(251,191,36,.3)">Comms Efficiency −4%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AUTONOMOUS RECOMMENDATIONS -->
+  <div class="pnl" style="flex:1">
+    <div class="pnl-hd">
+      <div class="pnl-title">AUTONOMOUS RECOMMENDATIONS</div>
+      <span class="pnl-badge b-violet">12 ACTIVE</span>
+    </div>
+    <div class="pnl-content">
+      <div class="rec-list">
+        <div class="rec-card p-high">
+          <div class="rec-header"><div class="rec-id">ALERT #A1298 · PRIORITY HIGH</div><span class="pnl-badge b-red">IMMEDIATE</span></div>
+          <div class="rec-title">Power consumption anomaly — battery degradation</div>
+          <div class="rec-desc">Battery cell array at 24% health, 91% failure probability. Reduce payload duty cycle immediately to preserve remaining capacity.</div>
+          <div class="rec-actions">
+            <div class="rec-action">Reduce payload duty cycle by 15%</div>
+            <div class="rec-action">Enable battery balancing mode</div>
+            <div class="rec-action">Increase telemetry sampling to 10 Hz</div>
+            <div class="rec-action">Schedule maintenance review within 72h</div>
+          </div>
+          <div class="rec-footer"><div class="rec-conf">CONFIDENCE: 94%</div><div class="rec-risk-red">RISK REDUCTION: 72%</div></div>
+        </div>
+        <div class="rec-card p-high">
+          <div class="rec-header"><div class="rec-id">ALERT #A1301 · PRIORITY HIGH</div><span class="pnl-badge b-red">URGENT</span></div>
+          <div class="rec-title">Conjunction avoidance — DEBRIS-66721</div>
+          <div class="rec-desc">Pc 2.1E-4 exceeds threshold. Avoidance maneuver required before T-48h window closes. Evaluate power budget before burn.</div>
+          <div class="rec-actions">
+            <div class="rec-action">Execute 0.41 m/s radial burn at T-48h</div>
+            <div class="rec-action">Verify power budget pre-maneuver</div>
+            <div class="rec-action">Update CDM post-maneuver</div>
+          </div>
+          <div class="rec-footer"><div class="rec-conf">CONFIDENCE: 97%</div><div class="rec-risk-red">RISK REDUCTION: 99%</div></div>
+        </div>
+        <div class="rec-card p-med">
+          <div class="rec-header"><div class="rec-id">ALERT #A1299 · PRIORITY MED</div><span class="pnl-badge b-amber">PLANNED</span></div>
+          <div class="rec-title">Reaction wheel #2 — bearing degradation</div>
+          <div class="rec-desc">RW-2 bearing friction increased 28%. Schedule corrective action before 24-day RUL expires.</div>
+          <div class="rec-actions">
+            <div class="rec-action">Reduce spin-up frequency by 30%</div>
+            <div class="rec-action">Switch primary attitude control to RW-1/3</div>
+            <div class="rec-action">Schedule ground maintenance window</div>
+          </div>
+          <div class="rec-footer"><div class="rec-conf">CONFIDENCE: 88%</div><div class="rec-risk-red">RISK REDUCTION: 65%</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /col-r -->
+
+</div><!-- /workspace -->
 
 <script>
-const scores  = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.10000000149011612, 0.10000000149011612, 0.0, 0.0, 0.0, 0.10000000149011612, 0.20000000298023224, 0.30000001192092896, 0.5, 0.6000000238418579, 0.6000000238418579, 0.6000000238418579, 0.5, 0.699999988079071, 1.0, 1.0, 1.0, 1.0, 1.0, 1.399999976158142, 1.399999976158142, 1.600000023841858, 1.7000000476837158, 1.7000000476837158, 1.899999976158142, 2.0, 2.0999999046325684, 2.299999952316284, 2.5, 2.700000047683716, 2.799999952316284, 2.9000000953674316, 3.0999999046325684, 3.5, 3.5999999046325684, 3.799999952316284, 3.799999952316284, 4.0, 4.099999904632568, 4.400000095367432, 4.599999904632568, 5.0, 5.199999809265137, 5.099999904632568, 5.400000095367432, 5.400000095367432, 5.699999809265137, 5.900000095367432, 6.099999904632568, 6.300000190734863, 6.699999809265137, 6.900000095367432, 7.199999809265137, 7.699999809265137, 8.0, 8.399999618530273, 8.699999809265137, 8.899999618530273, 8.899999618530273, 8.800000190734863, 8.800000190734863, 8.899999618530273, 9.0, 9.199999809265137, 9.300000190734863, 9.100000381469727, 9.300000190734863, 9.300000190734863, 9.300000190734863, 9.399999618530273, 9.600000381469727, 9.600000381469727, 9.699999809265137, 9.699999809265137, 9.5, 9.5, 9.699999809265137, 9.899999618530273, 10.0, 9.699999809265137, 9.699999809265137, 9.699999809265137, 9.899999618530273, 9.899999618530273, 10.0, 10.300000190734863, 10.199999809265137, 10.100000381469727, 10.199999809265137, 10.300000190734863, 10.300000190734863, 10.399999618530273, 10.399999618530273, 10.300000190734863, 10.100000381469727, 10.0, 9.899999618530273, 9.699999809265137, 9.600000381469727, 9.199999809265137, 9.5, 9.399999618530273, 9.300000190734863, 9.199999809265137, 9.100000381469727, 9.399999618530273, 9.399999618530273, 9.399999618530273, 9.399999618530273, 9.199999809265137, 9.100000381469727, 9.0, 8.800000190734863, 8.5, 8.300000190734863, 8.100000381469727, 7.900000095367432, 7.900000095367432, 7.900000095367432, 8.100000381469727, 8.199999809265137, 8.300000190734863, 8.399999618530273, 8.600000381469727, 8.699999809265137, 8.899999618530273, 8.899999618530273, 8.800000190734863, 9.0, 8.800000190734863, 8.800000190734863, 8.899999618530273, 9.0, 8.899999618530273, 9.100000381469727, 9.199999809265137, 9.300000190734863, 9.199999809265137, 9.199999809265137, 9.399999618530273, 9.5, 9.399999618530273, 9.199999809265137, 9.199999809265137, 9.199999809265137, 8.899999618530273, 9.0, 9.100000381469727, 9.0, 9.0, 9.100000381469727, 9.100000381469727, 9.0, 8.899999618530273, 9.199999809265137, 9.300000190734863, 9.699999809265137, 9.699999809265137, 10.0, 10.100000381469727, 9.800000190734863, 9.800000190734863, 9.899999618530273, 10.100000381469727, 10.199999809265137, 10.0, 9.800000190734863, 9.800000190734863, 9.699999809265137, 9.899999618530273, 10.0, 9.699999809265137, 9.699999809265137, 9.899999618530273, 9.699999809265137, 9.699999809265137, 9.600000381469727, 9.5, 9.600000381469727, 9.5, 9.5, 9.5, 9.399999618530273, 9.300000190734863, 9.199999809265137, 9.399999618530273, 9.399999618530273, 9.399999618530273, 9.399999618530273, 9.199999809265137, 9.0, 8.800000190734863, 8.600000381469727, 8.5, 8.199999809265137, 8.0, 7.800000190734863, 7.699999809265137, 7.699999809265137, 7.400000095367432, 7.099999904632568, 7.099999904632568, 7.0, 6.800000190734863, 6.599999904632568, 6.599999904632568, 6.400000095367432, 6.099999904632568, 5.900000095367432, 5.900000095367432, 6.199999809265137, 6.400000095367432, 6.5, 6.699999809265137, 6.699999809265137, 6.900000095367432, 6.900000095367432, 7.199999809265137, 7.300000190734863, 7.5, 7.599999904632568, 7.599999904632568, 7.800000190734863, 7.900000095367432, 7.800000190734863, 8.0, 8.199999809265137, 8.399999618530273, 8.600000381469727, 8.699999809265137, 8.899999618530273, 9.199999809265137, 9.300000190734863, 9.5, 9.699999809265137, 10.0, 10.300000190734863, 10.399999618530273, 10.600000381469727, 10.899999618530273, 11.199999809265137, 11.300000190734863, 11.600000381469727, 11.800000190734863, 12.199999809265137, 12.399999618530273, 12.899999618530273, 13.399999618530273, 13.699999809265137, 14.100000381469727, 14.600000381469727, 15.100000381469727, 15.600000381469727, 15.899999618530273, 16.600000381469727, 17.100000381469727, 17.600000381469727, 18.200000762939453, 18.700000762939453, 19.299999237060547, 19.799999237060547, 20.200000762939453, 20.899999618530273, 21.700000762939453, 22.200000762939453, 22.899999618530273, 23.700000762939453, 24.5, 25.399999618530273, 25.899999618530273, 26.200000762939453, 26.200000762939453, 26.100000381469727, 26.100000381469727, 26.0, 26.0, 25.899999618530273, 25.600000381469727, 25.5, 25.399999618530273, 25.200000762939453, 25.200000762939453, 25.0, 25.0, 24.700000762939453, 24.399999618530273, 24.100000381469727, 23.799999237060547, 23.299999237060547, 22.899999618530273, 22.299999237060547, 22.100000381469727, 21.600000381469727, 21.200000762939453, 21.0, 20.399999618530273, 20.0, 19.799999237060547, 19.399999618530273, 19.0, 18.5, 18.299999237060547, 17.899999618530273, 17.600000381469727, 17.0, 16.299999237060547, 15.699999809265137, 15.100000381469727, 14.600000381469727, 14.300000190734863, 13.800000190734863, 13.300000190734863, 12.899999618530273, 12.600000381469727, 12.0, 11.399999618530273, 10.800000190734863, 10.199999809265137, 9.800000190734863, 9.100000381469727, 8.699999809265137, 8.300000190734863, 7.5, 6.900000095367432, 6.300000190734863, 5.599999904632568, 4.800000190734863, 4.099999904632568, 3.299999952316284, 2.5999999046325684, 2.0, 1.600000023841858];
-const errors  = [0.014931, 0.014952, 0.015168, 0.015004, 0.015211, 0.015362, 0.015412, 0.01552, 0.01576, 0.015744, 0.015491, 0.015326, 0.015424, 0.015715, 0.015792, 0.016054, 0.016213, 0.016433, 0.016362, 0.016391, 0.016314, 0.016529, 0.016916, 0.016928, 0.016976, 0.016985, 0.017012, 0.017513, 0.017567, 0.017782, 0.017905, 0.017933, 0.018202, 0.018373, 0.018512, 0.018782, 0.019076, 0.019285, 0.019527, 0.01957, 0.019931, 0.020409, 0.020656, 0.02086, 0.020936, 0.021223, 0.021299, 0.021696, 0.022039, 0.022567, 0.022843, 0.022726, 0.023116, 0.0232, 0.023543, 0.023772, 0.024071, 0.024447, 0.024947, 0.025201, 0.02567, 0.026324, 0.026721, 0.027278, 0.027787, 0.028013, 0.028009, 0.027932, 0.027855, 0.028015, 0.028252, 0.028472, 0.028556, 0.028359, 0.028569, 0.028555, 0.028574, 0.028796, 0.029001, 0.029012, 0.029144, 0.029207, 0.028875, 0.028906, 0.029219, 0.029387, 0.029516, 0.02912, 0.02916, 0.029201, 0.029403, 0.029503, 0.029569, 0.03, 0.02988, 0.029793, 0.02986, 0.03, 0.030055, 0.03018, 0.03012, 0.030025, 0.029666, 0.029642, 0.029408, 0.029154, 0.029037, 0.028474, 0.028869, 0.028708, 0.028534, 0.028445, 0.028279, 0.028805, 0.02876, 0.028804, 0.028731, 0.028514, 0.028279, 0.028244, 0.027899, 0.027416, 0.02716, 0.026874, 0.026577, 0.026599, 0.026641, 0.026869, 0.02702, 0.027195, 0.027349, 0.02758, 0.027811, 0.02802, 0.028055, 0.027942, 0.028114, 0.027925, 0.027941, 0.028053, 0.028124, 0.028054, 0.028366, 0.028521, 0.028595, 0.028524, 0.028413, 0.028686, 0.028952, 0.028735, 0.028463, 0.028455, 0.028486, 0.028069, 0.028147, 0.028317, 0.028236, 0.028215, 0.028312, 0.028363, 0.028225, 0.028094, 0.028426, 0.0286, 0.029173, 0.029214, 0.029621, 0.029753, 0.02936, 0.029299, 0.029473, 0.029691, 0.029934, 0.029544, 0.029337, 0.029245, 0.029103, 0.029415, 0.029537, 0.029192, 0.029197, 0.029385, 0.029179, 0.029168, 0.029035, 0.028887, 0.029084, 0.028899, 0.028894, 0.028918, 0.028754, 0.028599, 0.028524, 0.028716, 0.028738, 0.028807, 0.028759, 0.028398, 0.028184, 0.027926, 0.027652, 0.02755, 0.027103, 0.026796, 0.026556, 0.026396, 0.026334, 0.02593, 0.025507, 0.025525, 0.025357, 0.025078, 0.024823, 0.02477, 0.024487, 0.024128, 0.023861, 0.023892, 0.024289, 0.024601, 0.024709, 0.02492, 0.024953, 0.02517, 0.025201, 0.025717, 0.025795, 0.026127, 0.026195, 0.026243, 0.026552, 0.026585, 0.026464, 0.026812, 0.027128, 0.027311, 0.027668, 0.027709, 0.028106, 0.028422, 0.02862, 0.028836, 0.0291, 0.029631, 0.03003, 0.030134, 0.030399, 0.03088, 0.03126, 0.031422, 0.031798, 0.032111, 0.032657, 0.033016, 0.033595, 0.03435, 0.034762, 0.035393, 0.03597, 0.036707, 0.037425, 0.03791, 0.03882, 0.039495, 0.040194, 0.041067, 0.041794, 0.042668, 0.043288, 0.043819, 0.044928, 0.045956, 0.046638, 0.047606, 0.048799, 0.049894, 0.051181, 0.051845, 0.052224, 0.052288, 0.052214, 0.052141, 0.052045, 0.052042, 0.051881, 0.051445, 0.051239, 0.05122, 0.050938, 0.050842, 0.050595, 0.050591, 0.050234, 0.049821, 0.04929, 0.048891, 0.048239, 0.04766, 0.046862, 0.046471, 0.04589, 0.045319, 0.045004, 0.044226, 0.04358, 0.043367, 0.042791, 0.042179, 0.041541, 0.041243, 0.040645, 0.040238, 0.039353, 0.038437, 0.037544, 0.036676, 0.036034, 0.035628, 0.034946, 0.034259, 0.03371, 0.033212, 0.032355, 0.031598, 0.03072, 0.029911, 0.029297, 0.028332, 0.027717, 0.027143, 0.02614, 0.025276, 0.024434, 0.023426, 0.022345, 0.021373, 0.0202, 0.019169, 0.018442, 0.017793];
-const preds   = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
-const labels  = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
-const history = [0.1115, 0.018725, 0.016562, 0.015895, 0.015501, 0.015225, 0.015033, 0.01488, 0.014773, 0.0147, 0.014641, 0.014602, 0.014571, 0.014551, 0.014538, 0.014526, 0.014521, 0.014513, 0.01451, 0.014504, 0.014507, 0.014501, 0.014499, 0.014493, 0.014493, 0.01449, 0.014485, 0.014484, 0.014479, 0.014482, 0.014478, 0.014476, 0.014477, 0.014475, 0.014475, 0.014479, 0.014474, 0.014469, 0.014472, 0.014472, 0.01447, 0.014468, 0.014466, 0.014468, 0.014467, 0.014465, 0.014467, 0.014465, 0.014465, 0.014466];
-const thresh  = 0.015570;
-const telemData = {"power_bus_voltage": [28.68, 27.81, 28.01, 28.16, 27.68, 28.0, 28.0, 27.3, 28.41, 28.24, 27.75, 27.93, 28.2, 27.9, 27.9, 27.42, 28.22, 28.05, 28.11, 27.39, 28.66, 28.06, 27.85, 28.81, 27.98, 27.42, 27.84, 27.08, 28.42, 27.83, 27.7, 28.43, 27.34, 28.21, 27.17, 27.74, 27.52, 28.58, 28.71, 27.87, 28.34, 27.93, 28.23, 27.7, 27.32, 27.28, 28.15, 28.9, 28.11, 27.79, 28.76, 28.09, 25.83, 26.74, 26.38, 26.12, 25.34, 26.42, 26.6, 26.86], "thermal_cpu_temp": [42.61, 42.9, 44.4, 42.64, 48.0, 44.43, 45.22, 47.88, 48.01, 44.57, 45.66, 46.47, 44.61, 41.44, 46.31, 46.79, 45.83, 43.15, 44.61, 43.82, 44.4, 47.59, 48.06, 46.34, 46.1, 46.35, 44.98, 44.85, 43.65, 44.89, 49.52, 46.74, 44.32, 44.06, 43.27, 45.75, 45.78, 42.11, 45.97, 43.86, 47.85, 45.31, 48.44, 44.08, 44.42, 45.6, 47.11, 46.13, 42.53, 45.37, 45.04, 44.14, 54.33, 59.69, 53.88, 54.54, 52.42, 52.89, 52.51, 53.29], "attitude_rw_speed_x": [1168.74, 1212.58, 1135.32, 1090.05, 1205.29, 1119.81, 1082.88, 1222.4, 1157.34, 1229.77, 1168.15, 1132.68, 1125.39, 1169.1, 1183.6, 1150.59, 1183.13, 1107.83, 1200.87, 1092.38, 1188.37, 1241.84, 1265.52, 1302.86, 1106.62, 1245.52, 1272.38, 1258.83, 1144.24, 1224.71, 1311.6, 1110.16, 1228.58, 1266.74, 1158.2, 1234.98, 1135.75, 1151.27, 1150.98, 1211.54, 1194.54, 1257.25, 1143.58, 1192.12, 1257.66, 1233.65, 1120.52, 1239.91, 1171.29, 1223.12, 1218.04, 1273.16, 971.1, 773.04, 840.13, 981.5, 843.33, 1077.97, 936.09, 916.03], "comms_signal_strength": [-83.12, -84.71, -88.37, -82.97, -87.88, -87.69, -85.72, -83.42, -84.4, -83.38, -85.89, -85.34, -87.27, -85.63, -83.81, -85.6, -84.05, -86.15, -86.18, -84.92, -85.39, -83.82, -84.64, -81.52, -85.44, -85.45, -87.08, -84.95, -83.63, -86.48, -85.1, -83.56, -85.25, -86.04, -83.05, -84.81, -84.21, -82.66, -82.71, -85.69, -86.05, -84.43, -85.27, -88.8, -82.45, -84.96, -83.53, -87.35, -82.42, -86.18, -85.22, -87.8, -97.05, -94.38, -95.32, -94.57, -91.54, -94.08, -97.42, -93.92], "propulsion_tank_pressure": [217.35, 220.57, 222.19, 220.09, 219.23, 220.46, 219.25, 220.96, 219.98, 222.09, 220.75, 218.91, 220.91, 221.4, 219.15, 219.36, 216.54, 221.36, 219.12, 216.82, 217.35, 219.67, 221.14, 219.87, 220.71, 218.35, 217.99, 221.33, 220.74, 219.95, 221.92, 218.57, 219.37, 221.54, 222.76, 220.01, 222.52, 219.1, 220.49, 219.74, 217.62, 220.39, 221.4, 219.78, 219.89, 222.09, 218.13, 217.75, 219.02, 218.21, 222.02, 220.46, 210.09, 210.33, 215.64, 210.26, 214.14, 211.83, 215.24, 214.39]};
-const ORANGE='#f97316',CYAN='#00d4ff',GREEN='#22c55e',
-      RED='#ef4444',AMBER='#fbbf24',VIOLET='#a78bfa',MUTED='#7dd3fc';
-
-const baseOpts = {
-  responsive:true, maintainAspectRatio:false,
-  plugins:{legend:{display:false}},
-  scales:{
-    x:{display:false},
-    y:{grid:{color:'rgba(26,50,84,.4)'},
-       ticks:{color:MUTED,font:{family:'Space Mono',size:9}},
-       border:{color:'rgba(26,50,84,.5)'}}
-  }
-};
-
-// Timeline
-new Chart(document.getElementById('timelineChart'),{
-  type:'line',
-  data:{labels:scores.map((_,i)=>i),datasets:[
-    {data:scores,borderColor:ORANGE,borderWidth:1.5,pointRadius:0,fill:true,backgroundColor:'rgba(249,115,22,.07)',tension:0.3},
-    {data:labels.map(l=>l?90:null),borderColor:RED,borderWidth:0,pointRadius:2.5,pointBackgroundColor:RED,showLine:false},
-  ]},
-  options:{...baseOpts,plugins:{legend:{display:true,labels:{color:MUTED,font:{size:9,family:'Space Mono'},boxWidth:8}}},
-    scales:{...baseOpts.scales,y:{...baseOpts.scales.y,min:0,max:100}}}
-});
-
-// Loss
-new Chart(document.getElementById('lossChart'),{
-  type:'line',
-  data:{labels:history.map((_,i)=>i+1),datasets:[
-    {data:history,borderColor:CYAN,borderWidth:1.5,pointRadius:0,fill:true,backgroundColor:'rgba(0,212,255,.05)',tension:0.4}
-  ]},
-  options:{...baseOpts,scales:{x:{display:true,ticks:{color:MUTED,font:{family:'Space Mono',size:8}},grid:{display:false},border:{color:'rgba(26,50,84,.5)'}},y:baseOpts.scales.y}}
-});
-
-// Distribution
-const bins=Array.from({length:20},(_,i)=>i*5);
-const nh=new Array(20).fill(0),ah=new Array(20).fill(0);
-scores.forEach((s,i)=>{const b=Math.min(19,Math.floor(s/5));if(labels[i])ah[b]++;else nh[b]++;});
-new Chart(document.getElementById('distChart'),{
-  type:'bar',
-  data:{labels:bins.map(b=>b+''),datasets:[
-    {label:'Normal',data:nh,backgroundColor:'rgba(0,212,255,.45)',borderColor:CYAN,borderWidth:1},
-    {label:'Anomaly',data:ah,backgroundColor:'rgba(249,115,22,.45)',borderColor:ORANGE,borderWidth:1},
-  ]},
-  options:{...baseOpts,
-    plugins:{legend:{display:true,labels:{color:MUTED,font:{size:9,family:'Space Mono'},boxWidth:8}}},
-    scales:{x:{stacked:true,ticks:{color:MUTED,font:{family:'Space Mono',size:8}},grid:{display:false},border:{color:'rgba(26,50,84,.5)'}},
-             y:{stacked:true,...baseOpts.scales.y}}}
-});
-
-// Error
-new Chart(document.getElementById('errorChart'),{
-  type:'line',
-  data:{labels:errors.map((_,i)=>i),datasets:[
-    {data:errors,borderColor:VIOLET,borderWidth:1,pointRadius:0,fill:true,backgroundColor:'rgba(167,139,250,.06)',tension:0.3},
-    {data:errors.map(()=>thresh),borderColor:RED,borderWidth:1,borderDash:[4,4],pointRadius:0,fill:false},
-  ]},
-  options:{...baseOpts,plugins:{legend:{display:true,labels:{color:MUTED,font:{size:9,family:'Space Mono'},boxWidth:8}}}}
-});
-
-// Mission Timeline — score as bar chart coloured by severity
-const mColors = scores.map(s=>s>75?RED:s>50?ORANGE:s>25?AMBER:GREEN);
-new Chart(document.getElementById('missionChart'),{
-  type:'bar',
-  data:{labels:scores.map((_,i)=>i),datasets:[{data:scores,backgroundColor:mColors,borderWidth:0}]},
-  options:{...baseOpts,scales:{x:{display:false},y:{...baseOpts.scales.y,min:0,max:100,
-    title:{display:true,text:'Severity',color:MUTED,font:{size:9}}}}}
-});
-
-// Sparklines for telemetry
-const telemKeys = Object.keys(telemData);
-const subColors = {power:ORANGE,thermal:RED,attitude:VIOLET,propulsion:AMBER,comms:CYAN};
-telemKeys.forEach((key,i)=>{
-  const sub = key.split('_')[0];
-  const color = subColors[sub]||CYAN;
-  const vals = telemData[key];
-  const ctx = document.getElementById('spark_'+i);
-  if(!ctx) return;
-  new Chart(ctx,{
-    type:'line',
-    data:{labels:vals.map((_,j)=>j),datasets:[{data:vals,borderColor:color,borderWidth:1,pointRadius:0,fill:false,tension:0.3}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},
-      scales:{x:{display:false},y:{display:false}}}
-  });
-});
-
 // Clock
-function tick(){document.getElementById('clock').textContent=new Date().toUTCString().replace('GMT','UTC');}
+function tick(){
+  const now = new Date();
+  document.getElementById('clk').textContent = now.toUTCString().replace('GMT','UTC');
+}
 tick(); setInterval(tick,1000);
+
+// Animated counters
+function animateCounter(el, end, duration=1200, prefix='', suffix='') {
+  const start = 0;
+  const step = end / (duration / 16);
+  let current = start;
+  const timer = setInterval(() => {
+    current = Math.min(current + step, end);
+    el.textContent = prefix + Math.round(current).toLocaleString() + suffix;
+    if (current >= end) clearInterval(timer);
+  }, 16);
+}
+setTimeout(() => {
+  animateCounter(document.getElementById('acts'), 1842);
+  animateCounter(document.getElementById('trkd'), 43721);
+  animateCounter(document.getElementById('anoms'), 329);
+}, 300);
+
+// Tab switching
+function switchTab(tab) {
+  ['Conj','Tl','Arch'].forEach(t => {
+    document.getElementById('tab'+t).style.display = 'none';
+  });
+  document.querySelectorAll('.tl-tab').forEach((el,i) => {
+    el.classList.remove('active');
+    if (['conj','tl','arch'][i] === tab) el.classList.add('active');
+  });
+  const map = {conj:'tabConj', tl:'tabTl', arch:'tabArch'};
+  document.getElementById(map[tab]).style.display = 'flex';
+  if (tab === 'tl') buildTimeline();
+}
+
+// Mission timeline chart
+let tlBuilt = false;
+function buildTimeline() {
+  if (tlBuilt) return; tlBuilt = true;
+  const labels = Array.from({length:48}, (_,i) => {
+    const h = i % 24;
+    return i % 6 === 0 ? `${h.toString().padStart(2,'0')}:00` : '';
+  });
+  const scores = Array.from({length:48}, (_,i) => {
+    const base = 15 + Math.sin(i*0.4)*8 + Math.random()*5;
+    if (i===18||i===19) return 78;
+    if (i===30||i===31) return 65;
+    if (i===38) return 92;
+    return base;
+  });
+  const colors = scores.map(s => s>70?'rgba(239,68,68,.7)':s>50?'rgba(245,158,11,.7)':s>30?'rgba(249,115,22,.5)':'rgba(34,197,94,.5)');
+  new Chart(document.getElementById('tlChart'), {
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {data:scores, backgroundColor:colors, borderWidth:0},
+        {type:'line', data:scores.map(()=>40), borderColor:'rgba(0,212,255,.4)', borderWidth:1, borderDash:[3,3], pointRadius:0, fill:false},
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{
+        callbacks:{label:ctx=>`Severity: ${ctx.raw.toFixed(0)}/100`}
+      }},
+      scales:{
+        x:{ticks:{color:'#64748b',font:{family:'Space Mono',size:8}}, grid:{display:false}, border:{color:'#152840'}},
+        y:{min:0, max:100, ticks:{color:'#64748b',font:{family:'Space Mono',size:8}}, grid:{color:'rgba(21,40,64,.5)'}, border:{color:'#152840'}}
+      }
+    }
+  });
+}
+
+// Subtle pulse animation on threat objects
+let pulseDir = 1, pulseVal = 0.15;
+setInterval(() => {
+  pulseVal += pulseDir * 0.02;
+  if (pulseVal >= 0.55 || pulseVal <= 0.1) pulseDir *= -1;
+  document.querySelectorAll('.conj-card.high').forEach(el => {
+    el.style.borderColor = `rgba(239,68,68,${pulseVal})`;
+  });
+}, 50);
 </script>
 </body>
 </html>
