@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ORBITIQ Sentinel — Telemetry Anomaly Detection</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#050d1a;--panel:#0a1628;--border:#1a3254;
+  --cyan:#00d4ff;--orange:#f97316;--green:#22c55e;
+  --red:#ef4444;--amber:#fbbf24;--violet:#a78bfa;
+  --muted:#7dd3fc;--text:#e2e8f0;--mono:'Space Mono',monospace;
+}
+body{background:var(--navy);color:var(--text);font-family:'Space Grotesk',sans-serif;min-height:100vh}
+
+/* HEADER */
+.header{background:var(--panel);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
+.header-left{display:flex;align-items:center;gap:12px}
+.logo{font-size:20px;font-weight:700;color:var(--orange);letter-spacing:2px}
+.logo span{color:var(--cyan)}
+.tagline{font-size:11px;color:var(--muted);letter-spacing:1px;margin-top:2px}
+.header-right{display:flex;align-items:center;gap:16px}
+.status-pill{display:flex;align-items:center;gap:6px;font-size:11px;padding:4px 10px;border-radius:12px;border:0.5px solid}
+.status-live{color:var(--green);border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.07)}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
+.ts{font-size:11px;color:var(--muted);font-family:var(--mono)}
+
+/* LAYOUT */
+.main{padding:20px 24px;display:flex;flex-direction:column;gap:16px}
+
+/* METRIC CARDS TOP ROW */
+.metrics-row{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.mcard{background:var(--panel);border:0.5px solid var(--border);border-radius:8px;padding:14px 16px;position:relative;overflow:hidden}
+.mcard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.mcard.orange::before{background:var(--orange)}
+.mcard.cyan::before{background:var(--cyan)}
+.mcard.green::before{background:var(--green)}
+.mcard.red::before{background:var(--red)}
+.mcard.violet::before{background:var(--violet)}
+.mcard.amber::before{background:var(--amber)}
+.mcard-val{font-size:26px;font-weight:700;line-height:1;margin-bottom:4px}
+.mcard-lbl{font-size:10px;color:var(--muted);letter-spacing:1px;font-weight:500}
+.mcard-sub{font-size:10px;color:var(--border);margin-top:3px;font-family:var(--mono)}
+
+/* GRID LAYOUTS */
+.row2{display:grid;grid-template-columns:1.6fr 1fr;gap:16px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+
+/* PANELS */
+.panel{background:var(--panel);border:0.5px solid var(--border);border-radius:10px;padding:16px}
+.panel-title{font-size:11px;font-weight:600;letter-spacing:2px;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.panel-title::before{content:'';display:inline-block;width:3px;height:14px;border-radius:2px;background:var(--orange)}
+
+/* CHARTS */
+.chart-wrap{position:relative;width:100%}
+
+/* SUBSYSTEM HEALTH */
+.health-grid{display:flex;flex-direction:column;gap:10px}
+.health-item{display:flex;flex-direction:column;gap:4px}
+.health-label{display:flex;justify-content:space-between;font-size:11px}
+.health-name{font-weight:500;text-transform:uppercase;letter-spacing:1px}
+.health-val{font-family:var(--mono);font-size:11px}
+.health-bar{height:6px;background:#0d1f3c;border-radius:3px;overflow:hidden}
+.health-fill{height:100%;border-radius:3px;transition:width .3s}
+
+/* ANOMALY TABLE */
+.anomaly-table{width:100%;border-collapse:collapse;font-size:12px}
+.anomaly-table th{text-align:left;padding:8px 10px;font-size:10px;letter-spacing:1px;color:var(--muted);border-bottom:0.5px solid var(--border);font-weight:500}
+.anomaly-table td{padding:8px 10px;border-bottom:0.5px solid rgba(26,50,84,.4)}
+.anomaly-table tr:hover td{background:rgba(0,212,255,.03)}
+.sev-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-family:var(--mono);font-weight:600}
+.sev-critical{background:rgba(239,68,68,.15);color:#fca5a5;border:0.5px solid rgba(239,68,68,.4)}
+.sev-high{background:rgba(249,115,22,.15);color:#fdba74;border:0.5px solid rgba(249,115,22,.4)}
+.sev-medium{background:rgba(251,191,36,.15);color:#fde68a;border:0.5px solid rgba(251,191,36,.4)}
+.sev-low{background:rgba(34,211,238,.1);color:#a5f3fc;border:0.5px solid rgba(34,211,238,.3)}
+.sub-pill{display:inline-block;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:500}
+
+/* EXPLAINABILITY */
+.feat-bars{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.feat-row{display:flex;align-items:center;gap:8px;font-size:11px}
+.feat-name{width:180px;color:var(--muted);font-family:var(--mono);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.feat-bar-wrap{flex:1;height:5px;background:#0d1f3c;border-radius:3px;overflow:hidden}
+.feat-bar-fill{height:100%;border-radius:3px}
+.feat-pct{width:36px;text-align:right;font-family:var(--mono);font-size:10px;color:var(--text)}
+
+/* FOOTER */
+.footer{text-align:center;padding:16px;font-size:11px;color:var(--border);border-top:0.5px solid var(--border);font-family:var(--mono)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div>
+      <div class="logo">ORBITIQ <span>SENTINEL</span></div>
+      <div class="tagline">LAYER 5 — AUTONOMOUS SPACECRAFT TELEMETRY ANOMALY DETECTION</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="status-pill status-live"><div class="pulse"></div>SYSTEM ACTIVE</div>
+    <div class="ts" id="clock"></div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- METRIC CARDS -->
+  <div class="metrics-row">
+    <div class="mcard orange">
+      <div class="mcard-val" style="color:var(--orange)">0.984</div>
+      <div class="mcard-lbl">F1 SCORE</div>
+      <div class="mcard-sub">Detection quality</div>
+    </div>
+    <div class="mcard cyan">
+      <div class="mcard-val" style="color:var(--cyan)">1.000</div>
+      <div class="mcard-lbl">AVG PRECISION</div>
+      <div class="mcard-sub">PR-AUC curve</div>
+    </div>
+    <div class="mcard green">
+      <div class="mcard-val" style="color:var(--green)">0.968</div>
+      <div class="mcard-lbl">RECALL</div>
+      <div class="mcard-sub">True anomaly catch rate</div>
+    </div>
+    <div class="mcard violet">
+      <div class="mcard-val" style="color:var(--violet)">1.000</div>
+      <div class="mcard-lbl">PRECISION</div>
+      <div class="mcard-sub">False alarm rate</div>
+    </div>
+    <div class="mcard red">
+      <div class="mcard-val" style="color:var(--red)">329</div>
+      <div class="mcard-lbl">FLAGGED</div>
+      <div class="mcard-sub">TP 329 · FP 0</div>
+    </div>
+    <div class="mcard amber">
+      <div class="mcard-val" style="color:var(--amber)">18</div>
+      <div class="mcard-lbl">PARAMETERS</div>
+      <div class="mcard-sub">5 subsystems monitored</div>
+    </div>
+  </div>
+
+  <!-- ROW 2: Anomaly Score Timeline + Subsystem Health -->
+  <div class="row2">
+    <div class="panel">
+      <div class="panel-title">ANOMALY SEVERITY TIMELINE</div>
+      <div class="chart-wrap" style="height:220px">
+        <canvas id="timelineChart"></canvas>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">SUBSYSTEM HEALTH INDEX</div>
+      <div class="health-grid">
+        
+        <div class="health-item">
+          <div class="health-label">
+            <span class="health-name" style="color:#f97316">power</span>
+            <span class="health-val" style="color:var(--red)">24.0%</span>
+          </div>
+          <div class="health-bar">
+            <div class="health-fill" style="width:24.0%;background:#ef4444"></div>
+          </div>
+        </div>
+        
+        <div class="health-item">
+          <div class="health-label">
+            <span class="health-name" style="color:#ef4444">thermal</span>
+            <span class="health-val" style="color:var(--amber)">53.0%</span>
+          </div>
+          <div class="health-bar">
+            <div class="health-fill" style="width:53.0%;background:#fbbf24"></div>
+          </div>
+        </div>
+        
+        <div class="health-item">
+          <div class="health-label">
+            <span class="health-name" style="color:#a78bfa">attitude</span>
+            <span class="health-val" style="color:var(--amber)">57.7%</span>
+          </div>
+          <div class="health-bar">
+            <div class="health-fill" style="width:57.7%;background:#fbbf24"></div>
+          </div>
+        </div>
+        
+        <div class="health-item">
+          <div class="health-label">
+            <span class="health-name" style="color:#fbbf24">propulsion</span>
+            <span class="health-val" style="color:var(--amber)">54.4%</span>
+          </div>
+          <div class="health-bar">
+            <div class="health-fill" style="width:54.4%;background:#fbbf24"></div>
+          </div>
+        </div>
+        
+        <div class="health-item">
+          <div class="health-label">
+            <span class="health-name" style="color:#22d3ee">comms</span>
+            <span class="health-val" style="color:var(--red)">11.6%</span>
+          </div>
+          <div class="health-bar">
+            <div class="health-fill" style="width:11.6%;background:#ef4444"></div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 3: Training Loss + Score Distribution + Reconstruction Error -->
+  <div class="row3">
+    <div class="panel">
+      <div class="panel-title">TRAINING LOSS CURVE</div>
+      <div class="chart-wrap" style="height:180px">
+        <canvas id="lossChart"></canvas>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">SCORE DISTRIBUTION</div>
+      <div class="chart-wrap" style="height:180px">
+        <canvas id="distChart"></canvas>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">RECONSTRUCTION ERROR</div>
+      <div class="chart-wrap" style="height:180px">
+        <canvas id="errorChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANOMALY TABLE -->
+  <div class="panel">
+    <div class="panel-title">TOP ANOMALY EVENTS — EXPLAINABILITY REPORT</div>
+    <table class="anomaly-table">
+      <thead>
+        <tr>
+          <th>RANK</th><th>SAMPLE</th><th>SEVERITY</th><th>STATUS</th>
+          <th>PRIMARY FAULT</th><th>SUBSYSTEM</th><th>CONTRIBUTION</th>
+          <th>SECONDARY FAULT</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+        <tr>
+          <td style="color:var(--muted);font-family:var(--mono)">#01</td>
+          <td style="font-family:var(--mono)">0278</td>
+          <td><span class="sev-badge sev-medium">26.2</span></td>
+          <td style="color:var(--red)">⚠ ANOMALY</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
+          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
+          <td style="font-family:var(--mono);color:var(--orange)">43.3%</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
+        </tr>
+        
+        <tr>
+          <td style="color:var(--muted);font-family:var(--mono)">#02</td>
+          <td style="font-family:var(--mono)">0279</td>
+          <td><span class="sev-badge sev-medium">26.2</span></td>
+          <td style="color:var(--red)">⚠ ANOMALY</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
+          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
+          <td style="font-family:var(--mono);color:var(--orange)">42.6%</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
+        </tr>
+        
+        <tr>
+          <td style="color:var(--muted);font-family:var(--mono)">#03</td>
+          <td style="font-family:var(--mono)">0280</td>
+          <td><span class="sev-badge sev-medium">26.1</span></td>
+          <td style="color:var(--red)">⚠ ANOMALY</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
+          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
+          <td style="font-family:var(--mono);color:var(--orange)">42.0%</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
+        </tr>
+        
+        <tr>
+          <td style="color:var(--muted);font-family:var(--mono)">#04</td>
+          <td style="font-family:var(--mono)">0281</td>
+          <td><span class="sev-badge sev-medium">26.1</span></td>
+          <td style="color:var(--red)">⚠ ANOMALY</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
+          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
+          <td style="font-family:var(--mono);color:var(--orange)">41.3%</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
+        </tr>
+        
+        <tr>
+          <td style="color:var(--muted);font-family:var(--mono)">#05</td>
+          <td style="font-family:var(--mono)">0282</td>
+          <td><span class="sev-badge sev-medium">26.0</span></td>
+          <td style="color:var(--red)">⚠ ANOMALY</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
+          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
+          <td style="font-family:var(--mono);color:var(--orange)">40.8%</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
+        </tr>
+        
+        <tr>
+          <td style="color:var(--muted);font-family:var(--mono)">#06</td>
+          <td style="font-family:var(--mono)">0283</td>
+          <td><span class="sev-badge sev-medium">26.0</span></td>
+          <td style="color:var(--red)">⚠ ANOMALY</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
+          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
+          <td style="font-family:var(--mono);color:var(--orange)">40.1%</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
+        </tr>
+        
+        <tr>
+          <td style="color:var(--muted);font-family:var(--mono)">#07</td>
+          <td style="font-family:var(--mono)">0277</td>
+          <td><span class="sev-badge sev-medium">25.9</span></td>
+          <td style="color:var(--red)">⚠ ANOMALY</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
+          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
+          <td style="font-family:var(--mono);color:var(--orange)">44.0%</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
+        </tr>
+        
+        <tr>
+          <td style="color:var(--muted);font-family:var(--mono)">#08</td>
+          <td style="font-family:var(--mono)">0284</td>
+          <td><span class="sev-badge sev-medium">25.9</span></td>
+          <td style="color:var(--red)">⚠ ANOMALY</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
+          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
+          <td style="font-family:var(--mono);color:var(--orange)">39.4%</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
+        </tr>
+        
+        <tr>
+          <td style="color:var(--muted);font-family:var(--mono)">#09</td>
+          <td style="font-family:var(--mono)">0285</td>
+          <td><span class="sev-badge sev-medium">25.6</span></td>
+          <td style="color:var(--red)">⚠ ANOMALY</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
+          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
+          <td style="font-family:var(--mono);color:var(--orange)">38.9%</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
+        </tr>
+        
+        <tr>
+          <td style="color:var(--muted);font-family:var(--mono)">#10</td>
+          <td style="font-family:var(--mono)">0286</td>
+          <td><span class="sev-badge sev-medium">25.5</span></td>
+          <td style="color:var(--red)">⚠ ANOMALY</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
+          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
+          <td style="font-family:var(--mono);color:var(--orange)">38.5%</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
+        </tr>
+        
+        <tr>
+          <td style="color:var(--muted);font-family:var(--mono)">#11</td>
+          <td style="font-family:var(--mono)">0276</td>
+          <td><span class="sev-badge sev-medium">25.4</span></td>
+          <td style="color:var(--red)">⚠ ANOMALY</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
+          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
+          <td style="font-family:var(--mono);color:var(--orange)">44.3%</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
+        </tr>
+        
+        <tr>
+          <td style="color:var(--muted);font-family:var(--mono)">#12</td>
+          <td style="font-family:var(--mono)">0287</td>
+          <td><span class="sev-badge sev-medium">25.4</span></td>
+          <td style="color:var(--red)">⚠ ANOMALY</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
+          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
+          <td style="font-family:var(--mono);color:var(--orange)">37.6%</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
+        </tr>
+        
+        <tr>
+          <td style="color:var(--muted);font-family:var(--mono)">#13</td>
+          <td style="font-family:var(--mono)">0288</td>
+          <td><span class="sev-badge sev-medium">25.2</span></td>
+          <td style="color:var(--red)">⚠ ANOMALY</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
+          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
+          <td style="font-family:var(--mono);color:var(--orange)">37.2%</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
+        </tr>
+        
+        <tr>
+          <td style="color:var(--muted);font-family:var(--mono)">#14</td>
+          <td style="font-family:var(--mono)">0289</td>
+          <td><span class="sev-badge sev-medium">25.2</span></td>
+          <td style="color:var(--red)">⚠ ANOMALY</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
+          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
+          <td style="font-family:var(--mono);color:var(--orange)">36.7%</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
+        </tr>
+        
+        <tr>
+          <td style="color:var(--muted);font-family:var(--mono)">#15</td>
+          <td style="font-family:var(--mono)">0290</td>
+          <td><span class="sev-badge sev-low">25.0</span></td>
+          <td style="color:var(--red)">⚠ ANOMALY</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
+          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
+          <td style="font-family:var(--mono);color:var(--orange)">35.9%</td>
+          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
+        </tr>
+        
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FEATURE EXPLAINABILITY -->
+  <div class="panel">
+    <div class="panel-title">FEATURE CONTRIBUTION ANALYSIS — TOP ANOMALY</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px;font-family:var(--mono)">
+      Sample #0278 | Severity: 26.2/100 | LSTM Autoencoder reconstruction error decomposition
+    </div>
+    <div class="feat-bars">
+      
+      <div class="feat-row">
+        <div class="feat-name">power_power_consumption</div>
+        <div class="feat-bar-wrap">
+          <div class="feat-bar-fill" style="width:43.3%;background:#f97316"></div>
+        </div>
+        <div class="feat-pct">43.3%</div>
+        <span class="sub-pill" style="font-size:9px;padding:1px 5px;background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span>
+      </div>
+      
+      <div class="feat-row">
+        <div class="feat-name">comms_signal_strength</div>
+        <div class="feat-bar-wrap">
+          <div class="feat-bar-fill" style="width:14.8%;background:#22d3ee"></div>
+        </div>
+        <div class="feat-pct">14.8%</div>
+        <span class="sub-pill" style="font-size:9px;padding:1px 5px;background:rgba(0,0,0,.3);color:#22d3ee;border:0.5px solid #22d3ee40">comms</span>
+      </div>
+      
+      <div class="feat-row">
+        <div class="feat-name">propulsion_tank_pressure</div>
+        <div class="feat-bar-wrap">
+          <div class="feat-bar-fill" style="width:9.1%;background:#fbbf24"></div>
+        </div>
+        <div class="feat-pct">9.1%</div>
+        <span class="sub-pill" style="font-size:9px;padding:1px 5px;background:rgba(0,0,0,.3);color:#fbbf24;border:0.5px solid #fbbf2440">propulsion</span>
+      </div>
+      
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  ORBITIQ SENTINEL v1.0 · LSTM AUTOENCODER · 18 TELEMETRY PARAMS · 5 SUBSYSTEMS · MAHIN NANDIPA · mahin-nandipa.netlify.app
+</div>
+
+<script>
+const scores = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.10000000149011612, 0.10000000149011612, 0.0, 0.0, 0.0, 0.10000000149011612, 0.20000000298023224, 0.30000001192092896, 0.5, 0.6000000238418579, 0.6000000238418579, 0.6000000238418579, 0.5, 0.699999988079071, 1.0, 1.0, 1.0, 1.0, 1.0, 1.399999976158142, 1.399999976158142, 1.600000023841858, 1.7000000476837158, 1.7000000476837158, 1.899999976158142, 2.0, 2.0999999046325684, 2.299999952316284, 2.5, 2.700000047683716, 2.799999952316284, 2.9000000953674316, 3.0999999046325684, 3.5, 3.5999999046325684, 3.799999952316284, 3.799999952316284, 4.0, 4.099999904632568, 4.400000095367432, 4.599999904632568, 5.0, 5.199999809265137, 5.099999904632568, 5.400000095367432, 5.400000095367432, 5.699999809265137, 5.900000095367432, 6.099999904632568, 6.300000190734863, 6.699999809265137, 6.900000095367432, 7.199999809265137, 7.699999809265137, 8.0, 8.399999618530273, 8.699999809265137, 8.899999618530273, 8.899999618530273, 8.800000190734863, 8.800000190734863, 8.899999618530273, 9.0, 9.199999809265137, 9.300000190734863, 9.100000381469727, 9.300000190734863, 9.300000190734863, 9.300000190734863, 9.399999618530273, 9.600000381469727, 9.600000381469727, 9.699999809265137, 9.699999809265137, 9.5, 9.5, 9.699999809265137, 9.899999618530273, 10.0, 9.699999809265137, 9.699999809265137, 9.699999809265137, 9.899999618530273, 9.899999618530273, 10.0, 10.300000190734863, 10.199999809265137, 10.100000381469727, 10.199999809265137, 10.300000190734863, 10.300000190734863, 10.399999618530273, 10.399999618530273, 10.300000190734863, 10.100000381469727, 10.0, 9.899999618530273, 9.699999809265137, 9.600000381469727, 9.199999809265137, 9.5, 9.399999618530273, 9.300000190734863, 9.199999809265137, 9.100000381469727, 9.399999618530273, 9.399999618530273, 9.399999618530273, 9.399999618530273, 9.199999809265137, 9.100000381469727, 9.0, 8.800000190734863, 8.5, 8.300000190734863, 8.100000381469727, 7.900000095367432, 7.900000095367432, 7.900000095367432, 8.100000381469727, 8.199999809265137, 8.300000190734863, 8.399999618530273, 8.600000381469727, 8.699999809265137, 8.899999618530273, 8.899999618530273, 8.800000190734863, 9.0, 8.800000190734863, 8.800000190734863, 8.899999618530273, 9.0, 8.899999618530273, 9.100000381469727, 9.199999809265137, 9.300000190734863, 9.199999809265137, 9.199999809265137, 9.399999618530273, 9.5, 9.399999618530273, 9.199999809265137, 9.199999809265137, 9.199999809265137, 8.899999618530273, 9.0, 9.100000381469727, 9.0, 9.0, 9.100000381469727, 9.100000381469727, 9.0, 8.899999618530273, 9.199999809265137, 9.300000190734863, 9.699999809265137, 9.699999809265137, 10.0, 10.100000381469727, 9.800000190734863, 9.800000190734863, 9.899999618530273, 10.100000381469727, 10.199999809265137, 10.0, 9.800000190734863, 9.800000190734863, 9.699999809265137, 9.899999618530273, 10.0, 9.699999809265137, 9.699999809265137, 9.899999618530273, 9.699999809265137, 9.699999809265137, 9.600000381469727, 9.5, 9.600000381469727, 9.5, 9.5, 9.5, 9.399999618530273, 9.300000190734863, 9.199999809265137, 9.399999618530273, 9.399999618530273, 9.399999618530273, 9.399999618530273, 9.199999809265137, 9.0, 8.800000190734863, 8.600000381469727, 8.5, 8.199999809265137, 8.0, 7.800000190734863, 7.699999809265137, 7.699999809265137, 7.400000095367432, 7.099999904632568, 7.099999904632568, 7.0, 6.800000190734863, 6.599999904632568, 6.599999904632568, 6.400000095367432, 6.099999904632568, 5.900000095367432, 5.900000095367432, 6.199999809265137, 6.400000095367432, 6.5, 6.699999809265137, 6.699999809265137, 6.900000095367432, 6.900000095367432, 7.199999809265137, 7.300000190734863, 7.5, 7.599999904632568, 7.599999904632568, 7.800000190734863, 7.900000095367432, 7.800000190734863, 8.0, 8.199999809265137, 8.399999618530273, 8.600000381469727, 8.699999809265137, 8.899999618530273, 9.199999809265137, 9.300000190734863, 9.5, 9.699999809265137, 10.0, 10.300000190734863, 10.399999618530273, 10.600000381469727, 10.899999618530273, 11.199999809265137, 11.300000190734863, 11.600000381469727, 11.800000190734863, 12.199999809265137, 12.399999618530273, 12.899999618530273, 13.399999618530273, 13.699999809265137, 14.100000381469727, 14.600000381469727, 15.100000381469727, 15.600000381469727, 15.899999618530273, 16.600000381469727, 17.100000381469727, 17.600000381469727, 18.200000762939453, 18.700000762939453, 19.299999237060547, 19.799999237060547, 20.200000762939453, 20.899999618530273, 21.700000762939453, 22.200000762939453, 22.899999618530273, 23.700000762939453, 24.5, 25.399999618530273, 25.899999618530273, 26.200000762939453, 26.200000762939453, 26.100000381469727, 26.100000381469727, 26.0, 26.0, 25.899999618530273, 25.600000381469727, 25.5, 25.399999618530273, 25.200000762939453, 25.200000762939453, 25.0, 25.0, 24.700000762939453, 24.399999618530273, 24.100000381469727, 23.799999237060547, 23.299999237060547, 22.899999618530273, 22.299999237060547, 22.100000381469727, 21.600000381469727, 21.200000762939453, 21.0, 20.399999618530273, 20.0, 19.799999237060547, 19.399999618530273, 19.0, 18.5, 18.299999237060547, 17.899999618530273, 17.600000381469727, 17.0, 16.299999237060547, 15.699999809265137, 15.100000381469727, 14.600000381469727, 14.300000190734863, 13.800000190734863, 13.300000190734863, 12.899999618530273, 12.600000381469727, 12.0, 11.399999618530273, 10.800000190734863, 10.199999809265137, 9.800000190734863, 9.100000381469727, 8.699999809265137, 8.300000190734863, 7.5, 6.900000095367432, 6.300000190734863, 5.599999904632568, 4.800000190734863, 4.099999904632568, 3.299999952316284, 2.5999999046325684, 2.0, 1.600000023841858];
+const errors = [0.014931, 0.014952, 0.015168, 0.015004, 0.015211, 0.015362, 0.015412, 0.01552, 0.01576, 0.015744, 0.015491, 0.015326, 0.015424, 0.015715, 0.015792, 0.016054, 0.016213, 0.016433, 0.016362, 0.016391, 0.016314, 0.016529, 0.016916, 0.016928, 0.016976, 0.016985, 0.017012, 0.017513, 0.017567, 0.017782, 0.017905, 0.017933, 0.018202, 0.018373, 0.018512, 0.018782, 0.019076, 0.019285, 0.019527, 0.01957, 0.019931, 0.020409, 0.020656, 0.02086, 0.020936, 0.021223, 0.021299, 0.021696, 0.022039, 0.022567, 0.022843, 0.022726, 0.023116, 0.0232, 0.023543, 0.023772, 0.024071, 0.024447, 0.024947, 0.025201, 0.02567, 0.026324, 0.026721, 0.027278, 0.027787, 0.028013, 0.028009, 0.027932, 0.027855, 0.028015, 0.028252, 0.028472, 0.028556, 0.028359, 0.028569, 0.028555, 0.028574, 0.028796, 0.029001, 0.029012, 0.029144, 0.029207, 0.028875, 0.028906, 0.029219, 0.029387, 0.029516, 0.02912, 0.02916, 0.029201, 0.029403, 0.029503, 0.029569, 0.03, 0.02988, 0.029793, 0.02986, 0.03, 0.030055, 0.03018, 0.03012, 0.030025, 0.029666, 0.029642, 0.029408, 0.029154, 0.029037, 0.028474, 0.028869, 0.028708, 0.028534, 0.028445, 0.028279, 0.028805, 0.02876, 0.028804, 0.028731, 0.028514, 0.028279, 0.028244, 0.027899, 0.027416, 0.02716, 0.026874, 0.026577, 0.026599, 0.026641, 0.026869, 0.02702, 0.027195, 0.027349, 0.02758, 0.027811, 0.02802, 0.028055, 0.027942, 0.028114, 0.027925, 0.027941, 0.028053, 0.028124, 0.028054, 0.028366, 0.028521, 0.028595, 0.028524, 0.028413, 0.028686, 0.028952, 0.028735, 0.028463, 0.028455, 0.028486, 0.028069, 0.028147, 0.028317, 0.028236, 0.028215, 0.028312, 0.028363, 0.028225, 0.028094, 0.028426, 0.0286, 0.029173, 0.029214, 0.029621, 0.029753, 0.02936, 0.029299, 0.029473, 0.029691, 0.029934, 0.029544, 0.029337, 0.029245, 0.029103, 0.029415, 0.029537, 0.029192, 0.029197, 0.029385, 0.029179, 0.029168, 0.029035, 0.028887, 0.029084, 0.028899, 0.028894, 0.028918, 0.028754, 0.028599, 0.028524, 0.028716, 0.028738, 0.028807, 0.028759, 0.028398, 0.028184, 0.027926, 0.027652, 0.02755, 0.027103, 0.026796, 0.026556, 0.026396, 0.026334, 0.02593, 0.025507, 0.025525, 0.025357, 0.025078, 0.024823, 0.02477, 0.024487, 0.024128, 0.023861, 0.023892, 0.024289, 0.024601, 0.024709, 0.02492, 0.024953, 0.02517, 0.025201, 0.025717, 0.025795, 0.026127, 0.026195, 0.026243, 0.026552, 0.026585, 0.026464, 0.026812, 0.027128, 0.027311, 0.027668, 0.027709, 0.028106, 0.028422, 0.02862, 0.028836, 0.0291, 0.029631, 0.03003, 0.030134, 0.030399, 0.03088, 0.03126, 0.031422, 0.031798, 0.032111, 0.032657, 0.033016, 0.033595, 0.03435, 0.034762, 0.035393, 0.03597, 0.036707, 0.037425, 0.03791, 0.03882, 0.039495, 0.040194, 0.041067, 0.041794, 0.042668, 0.043288, 0.043819, 0.044928, 0.045956, 0.046638, 0.047606, 0.048799, 0.049894, 0.051181, 0.051845, 0.052224, 0.052288, 0.052214, 0.052141, 0.052045, 0.052042, 0.051881, 0.051445, 0.051239, 0.05122, 0.050938, 0.050842, 0.050595, 0.050591, 0.050234, 0.049821, 0.04929, 0.048891, 0.048239, 0.04766, 0.046862, 0.046471, 0.04589, 0.045319, 0.045004, 0.044226, 0.04358, 0.043367, 0.042791, 0.042179, 0.041541, 0.041243, 0.040645, 0.040238, 0.039353, 0.038437, 0.037544, 0.036676, 0.036034, 0.035628, 0.034946, 0.034259, 0.03371, 0.033212, 0.032355, 0.031598, 0.03072, 0.029911, 0.029297, 0.028332, 0.027717, 0.027143, 0.02614, 0.025276, 0.024434, 0.023426, 0.022345, 0.021373, 0.0202, 0.019169, 0.018442, 0.017793];
+const preds  = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+const labels = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+const history = [0.1115, 0.018725, 0.016562, 0.015895, 0.015501, 0.015225, 0.015033, 0.01488, 0.014773, 0.0147, 0.014641, 0.014602, 0.014571, 0.014551, 0.014538, 0.014526, 0.014521, 0.014513, 0.01451, 0.014504, 0.014507, 0.014501, 0.014499, 0.014493, 0.014493, 0.01449, 0.014485, 0.014484, 0.014479, 0.014482, 0.014478, 0.014476, 0.014477, 0.014475, 0.014475, 0.014479, 0.014474, 0.014469, 0.014472, 0.014472, 0.01447, 0.014468, 0.014466, 0.014468, 0.014467, 0.014465, 0.014467, 0.014465, 0.014465, 0.014466];
+const thresh  = 0.015570;
+
+const ORANGE = '#f97316', CYAN = '#00d4ff', GREEN = '#22c55e',
+      RED = '#ef4444', AMBER = '#fbbf24', MUTED = '#7dd3fc';
+
+const chartDefaults = {
+  responsive: true, maintainAspectRatio: false,
+  plugins: {legend:{display:false}},
+  scales: {
+    x: {display:false},
+    y: {
+      grid: {color:'rgba(26,50,84,.4)'},
+      ticks: {color:MUTED, font:{family:'Space Mono',size:10}},
+      border: {color:'rgba(26,50,84,.6)'}
+    }
+  }
+};
+
+// 1. Timeline chart
+const timelineCtx = document.getElementById('timelineChart').getContext('2d');
+new Chart(timelineCtx, {
+  type: 'line',
+  data: {
+    labels: scores.map((_,i)=>i),
+    datasets: [
+      {
+        label: 'Severity Score',
+        data: scores,
+        borderColor: ORANGE,
+        borderWidth: 1.5,
+        pointRadius: 0,
+        fill: true,
+        backgroundColor: 'rgba(249,115,22,.08)',
+        tension: 0.3,
+      },
+      {
+        label: 'Ground Truth',
+        data: labels.map(l => l ? 85 : null),
+        borderColor: RED,
+        borderWidth: 0,
+        pointRadius: 3,
+        pointBackgroundColor: RED,
+        showLine: false,
+      }
+    ]
+  },
+  options: {
+    ...chartDefaults,
+    scales: {
+      ...chartDefaults.scales,
+      x: {display:false},
+      y: {...chartDefaults.scales.y, min:0, max:100,
+           title:{display:true, text:'Severity 0-100', color:MUTED, font:{size:10}}}
+    },
+    plugins: {
+      legend: {display:true, labels:{color:MUTED, font:{size:10, family:'Space Mono'}, boxWidth:10}},
+      annotation: {}
+    }
+  }
+});
+
+// 2. Loss chart
+const lossCtx = document.getElementById('lossChart').getContext('2d');
+new Chart(lossCtx, {
+  type: 'line',
+  data: {
+    labels: history.map((_,i)=>i+1),
+    datasets: [{
+      data: history,
+      borderColor: CYAN,
+      borderWidth: 1.5,
+      pointRadius: 0,
+      fill: true,
+      backgroundColor: 'rgba(0,212,255,.06)',
+      tension: 0.4,
+    }]
+  },
+  options: {
+    ...chartDefaults,
+    scales: {
+      ...chartDefaults.scales,
+      x: {display:true, ticks:{color:MUTED, font:{family:'Space Mono',size:9}}, grid:{display:false}, border:{color:'rgba(26,50,84,.6)'} },
+    }
+  }
+});
+
+// 3. Score distribution (histogram)
+const distCtx = document.getElementById('distChart').getContext('2d');
+const bins = Array.from({length:20}, (_,i) => i*5);
+const normHist = new Array(20).fill(0);
+const anomHist = new Array(20).fill(0);
+scores.forEach((s,i) => {
+  const b = Math.min(19, Math.floor(s/5));
+  if (labels[i]) anomHist[b]++; else normHist[b]++;
+});
+new Chart(distCtx, {
+  type: 'bar',
+  data: {
+    labels: bins.map(b => b+''),
+    datasets: [
+      {label:'Normal', data: normHist, backgroundColor:'rgba(0,212,255,.5)', borderColor:CYAN, borderWidth:1},
+      {label:'Anomaly', data: anomHist, backgroundColor:'rgba(249,115,22,.5)', borderColor:ORANGE, borderWidth:1},
+    ]
+  },
+  options: {
+    ...chartDefaults,
+    plugins:{legend:{display:true, labels:{color:MUTED, font:{size:10,family:'Space Mono'}, boxWidth:10}}},
+    scales:{
+      x:{stacked:true, ticks:{color:MUTED, font:{family:'Space Mono',size:9}}, grid:{display:false}, border:{color:'rgba(26,50,84,.6)'}},
+      y:{stacked:true, grid:{color:'rgba(26,50,84,.4)'}, ticks:{color:MUTED,font:{family:'Space Mono',size:10}}, border:{color:'rgba(26,50,84,.6)'}}
+    },
+  }
+});
+
+// 4. Reconstruction error
+const errCtx = document.getElementById('errorChart').getContext('2d');
+new Chart(errCtx, {
+  type: 'line',
+  data: {
+    labels: errors.map((_,i)=>i),
+    datasets: [
+      {
+        data: errors,
+        borderColor: VIOLET='#a78bfa',
+        borderWidth:1,
+        pointRadius:0,
+        fill:true,
+        backgroundColor:'rgba(167,139,250,.07)',
+        tension:0.3,
+      },
+      {
+        data: errors.map(()=>thresh),
+        borderColor: RED,
+        borderWidth: 1,
+        borderDash: [4,4],
+        pointRadius: 0,
+        fill: false,
+      }
+    ]
+  },
+  options: {
+    ...chartDefaults,
+    plugins:{
+      legend:{display:true, labels:{color:MUTED, font:{size:10,family:'Space Mono'}, boxWidth:10}}
+    },
+    scales:{
+      x:{display:false},
+      y:{grid:{color:'rgba(26,50,84,.4)'}, ticks:{color:MUTED,font:{family:'Space Mono',size:10}}, border:{color:'rgba(26,50,84,.6)'},
+          title:{display:true,text:'MSE Error',color:MUTED,font:{size:10}}}
+    }
+  }
+});
+
+// Clock
+function updateClock() {
+  document.getElementById('clock').textContent = new Date().toUTCString().replace('GMT','UTC');
+}
+updateClock();
+setInterval(updateClock, 1000);
+</script>
+</body>
+</html>
