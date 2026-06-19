@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ORBITIQ Sentinel — Telemetry Anomaly Detection</title>
+<title>ORBITIQ Sentinel — Spacecraft Telemetry Anomaly Detection</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono&display=swap" rel="stylesheet">
 <style>
@@ -14,613 +14,598 @@
   --red:#ef4444;--amber:#fbbf24;--violet:#a78bfa;
   --muted:#7dd3fc;--text:#e2e8f0;--mono:'Space Mono',monospace;
 }
-body{background:var(--navy);color:var(--text);font-family:'Space Grotesk',sans-serif;min-height:100vh}
-
-/* HEADER */
-.header{background:var(--panel);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
-.header-left{display:flex;align-items:center;gap:12px}
-.logo{font-size:20px;font-weight:700;color:var(--orange);letter-spacing:2px}
-.logo span{color:var(--cyan)}
-.tagline{font-size:11px;color:var(--muted);letter-spacing:1px;margin-top:2px}
-.header-right{display:flex;align-items:center;gap:16px}
-.status-pill{display:flex;align-items:center;gap:6px;font-size:11px;padding:4px 10px;border-radius:12px;border:0.5px solid}
-.status-live{color:var(--green);border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.07)}
-.pulse{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
-.ts{font-size:11px;color:var(--muted);font-family:var(--mono)}
-
-/* LAYOUT */
-.main{padding:20px 24px;display:flex;flex-direction:column;gap:16px}
-
-/* METRIC CARDS TOP ROW */
-.metrics-row{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
-.mcard{background:var(--panel);border:0.5px solid var(--border);border-radius:8px;padding:14px 16px;position:relative;overflow:hidden}
+body{background:var(--navy);color:var(--text);font-family:'Space Grotesk',sans-serif}
+.header{background:var(--panel);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-size:18px;font-weight:700;color:var(--orange);letter-spacing:2px}.logo span{color:var(--cyan)}
+.tagline{font-size:10px;color:var(--muted);letter-spacing:1px;margin-top:2px}
+.hright{display:flex;align-items:center;gap:14px}
+.pill{display:flex;align-items:center;gap:5px;font-size:10px;padding:3px 9px;border-radius:10px;border:0.5px solid;font-weight:500}
+.pill-green{color:var(--green);border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.07)}
+.pill-orange{color:var(--orange);border-color:rgba(249,115,22,.4);background:rgba(249,115,22,.07)}
+.pulse{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.ts{font-size:10px;color:var(--muted);font-family:var(--mono)}
+.main{padding:16px 20px;display:flex;flex-direction:column;gap:14px}
+.mrow{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.mcard{background:var(--panel);border:0.5px solid var(--border);border-radius:8px;padding:12px 14px;position:relative;overflow:hidden}
 .mcard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
-.mcard.orange::before{background:var(--orange)}
-.mcard.cyan::before{background:var(--cyan)}
-.mcard.green::before{background:var(--green)}
-.mcard.red::before{background:var(--red)}
-.mcard.violet::before{background:var(--violet)}
-.mcard.amber::before{background:var(--amber)}
-.mcard-val{font-size:26px;font-weight:700;line-height:1;margin-bottom:4px}
-.mcard-lbl{font-size:10px;color:var(--muted);letter-spacing:1px;font-weight:500}
-.mcard-sub{font-size:10px;color:var(--border);margin-top:3px;font-family:var(--mono)}
-
-/* GRID LAYOUTS */
-.row2{display:grid;grid-template-columns:1.6fr 1fr;gap:16px}
-.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
-
-/* PANELS */
-.panel{background:var(--panel);border:0.5px solid var(--border);border-radius:10px;padding:16px}
-.panel-title{font-size:11px;font-weight:600;letter-spacing:2px;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px}
-.panel-title::before{content:'';display:inline-block;width:3px;height:14px;border-radius:2px;background:var(--orange)}
-
-/* CHARTS */
-.chart-wrap{position:relative;width:100%}
-
-/* SUBSYSTEM HEALTH */
-.health-grid{display:flex;flex-direction:column;gap:10px}
-.health-item{display:flex;flex-direction:column;gap:4px}
-.health-label{display:flex;justify-content:space-between;font-size:11px}
-.health-name{font-weight:500;text-transform:uppercase;letter-spacing:1px}
-.health-val{font-family:var(--mono);font-size:11px}
-.health-bar{height:6px;background:#0d1f3c;border-radius:3px;overflow:hidden}
-.health-fill{height:100%;border-radius:3px;transition:width .3s}
-
-/* ANOMALY TABLE */
-.anomaly-table{width:100%;border-collapse:collapse;font-size:12px}
-.anomaly-table th{text-align:left;padding:8px 10px;font-size:10px;letter-spacing:1px;color:var(--muted);border-bottom:0.5px solid var(--border);font-weight:500}
-.anomaly-table td{padding:8px 10px;border-bottom:0.5px solid rgba(26,50,84,.4)}
-.anomaly-table tr:hover td{background:rgba(0,212,255,.03)}
-.sev-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-family:var(--mono);font-weight:600}
-.sev-critical{background:rgba(239,68,68,.15);color:#fca5a5;border:0.5px solid rgba(239,68,68,.4)}
-.sev-high{background:rgba(249,115,22,.15);color:#fdba74;border:0.5px solid rgba(249,115,22,.4)}
-.sev-medium{background:rgba(251,191,36,.15);color:#fde68a;border:0.5px solid rgba(251,191,36,.4)}
-.sev-low{background:rgba(34,211,238,.1);color:#a5f3fc;border:0.5px solid rgba(34,211,238,.3)}
-.sub-pill{display:inline-block;padding:1px 7px;border-radius:8px;font-size:10px;font-weight:500}
-
-/* EXPLAINABILITY */
-.feat-bars{display:flex;flex-direction:column;gap:6px;margin-top:4px}
-.feat-row{display:flex;align-items:center;gap:8px;font-size:11px}
-.feat-name{width:180px;color:var(--muted);font-family:var(--mono);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.feat-bar-wrap{flex:1;height:5px;background:#0d1f3c;border-radius:3px;overflow:hidden}
-.feat-bar-fill{height:100%;border-radius:3px}
-.feat-pct{width:36px;text-align:right;font-family:var(--mono);font-size:10px;color:var(--text)}
-
-/* FOOTER */
-.footer{text-align:center;padding:16px;font-size:11px;color:var(--border);border-top:0.5px solid var(--border);font-family:var(--mono)}
+.mcard.c-o::before{background:var(--orange)}.mcard.c-c::before{background:var(--cyan)}
+.mcard.c-g::before{background:var(--green)}.mcard.c-r::before{background:var(--red)}
+.mcard.c-v::before{background:var(--violet)}.mcard.c-a::before{background:var(--amber)}
+.mv{font-size:24px;font-weight:700;line-height:1;margin-bottom:3px}
+.ml{font-size:9px;color:var(--muted);letter-spacing:1px;font-weight:500}
+.ms{font-size:9px;color:#1a3254;margin-top:2px;font-family:var(--mono)}
+.r2{display:grid;grid-template-columns:1.5fr 1fr;gap:14px}
+.r3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.r22{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.panel{background:var(--panel);border:0.5px solid var(--border);border-radius:10px;padding:14px}
+.ptitle{font-size:10px;font-weight:600;letter-spacing:2px;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.ptitle::before{content:'';display:inline-block;width:3px;height:12px;border-radius:2px;background:var(--orange)}
+.cw{position:relative;width:100%}
+/* Health bars */
+.hg{display:flex;flex-direction:column;gap:9px}
+.hi .hl{display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px}
+.hb{height:5px;background:#0d1f3c;border-radius:3px;overflow:hidden}
+.hf{height:100%;border-radius:3px}
+/* Table */
+.tbl{width:100%;border-collapse:collapse;font-size:11px}
+.tbl th{text-align:left;padding:7px 9px;font-size:9px;letter-spacing:1px;color:var(--muted);border-bottom:0.5px solid var(--border);font-weight:500}
+.tbl td{padding:7px 9px;border-bottom:0.5px solid rgba(26,50,84,.3)}
+.tbl tr:hover td{background:rgba(0,212,255,.02)}
+.badge{display:inline-block;padding:1px 7px;border-radius:8px;font-size:9px;font-family:var(--mono);font-weight:600}
+.bc{background:rgba(239,68,68,.12);color:#fca5a5;border:0.5px solid rgba(239,68,68,.35)}
+.bh{background:rgba(249,115,22,.12);color:#fdba74;border:0.5px solid rgba(249,115,22,.35)}
+.bm{background:rgba(251,191,36,.12);color:#fde68a;border:0.5px solid rgba(251,191,36,.35)}
+.bn{background:rgba(34,197,94,.1);color:#86efac;border:0.5px solid rgba(34,197,94,.3)}
+.bw{background:rgba(251,191,36,.12);color:#fde68a;border:0.5px solid rgba(251,191,36,.35)}
+.sp{display:inline-block;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:500}
+/* Ops log */
+.log-feed{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto}
+.log-entry{display:flex;align-items:flex-start;gap:10px;padding:7px 10px;border-radius:5px;border:0.5px solid;font-size:11px}
+.log-crit{background:rgba(239,68,68,.05);border-color:rgba(239,68,68,.3)}
+.log-warn{background:rgba(251,191,36,.05);border-color:rgba(251,191,36,.3)}
+.log-info{background:rgba(0,212,255,.04);border-color:rgba(0,212,255,.2)}
+.log-time{font-family:var(--mono);font-size:9px;color:var(--muted);white-space:nowrap;margin-top:1px}
+.log-body{flex:1}
+.log-event{font-weight:500;font-size:11px}
+.log-detail{font-size:10px;color:var(--muted);margin-top:1px;font-family:var(--mono)}
+/* Failure modes */
+.fm-grid{display:flex;flex-direction:column;gap:8px}
+.fm-item{background:#050d1a;border:0.5px solid var(--border);border-radius:6px;padding:9px 12px}
+.fm-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.fm-name{font-size:10px;font-weight:600;letter-spacing:1px}
+.fm-count{font-family:var(--mono);font-size:9px;color:var(--muted)}
+.fm-modes{display:flex;flex-wrap:wrap;gap:4px}
+.fm-tag{font-size:9px;padding:1px 6px;border-radius:4px;background:#0a1628;border:0.5px solid;font-family:var(--mono)}
+/* Telem stream */
+.telem-grid{display:flex;flex-direction:column;gap:7px}
+.telem-row{display:flex;align-items:center;gap:10px;padding:7px 10px;background:#050d1a;border:0.5px solid var(--border);border-radius:5px}
+.telem-name{font-size:10px;font-family:var(--mono);width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.telem-val{font-size:13px;font-weight:600;font-family:var(--mono);width:80px;text-align:right}
+.telem-spark{flex:1;height:28px}
+.telem-status{width:60px;text-align:right}
+/* Feat bars */
+.fb{display:flex;flex-direction:column;gap:5px}
+.fr{display:flex;align-items:center;gap:7px;font-size:10px}
+.fn{width:175px;color:var(--muted);font-family:var(--mono);font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fbw{flex:1;height:4px;background:#0d1f3c;border-radius:2px;overflow:hidden}
+.fbf{height:100%;border-radius:2px}
+.fp{width:32px;text-align:right;font-family:var(--mono);font-size:9px}
+.footer{text-align:center;padding:14px;font-size:10px;color:#1a3254;border-top:0.5px solid var(--border);font-family:var(--mono)}
+::-webkit-scrollbar{width:4px}.log-feed::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:var(--navy)}.log-feed::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 </style>
 </head>
 <body>
 
 <div class="header">
-  <div class="header-left">
-    <div>
-      <div class="logo">ORBITIQ <span>SENTINEL</span></div>
-      <div class="tagline">LAYER 5 — AUTONOMOUS SPACECRAFT TELEMETRY ANOMALY DETECTION</div>
-    </div>
+  <div>
+    <div class="logo">ORBITIQ <span>SENTINEL</span></div>
+    <div class="tagline">LAYER 5 — AUTONOMOUS SPACECRAFT TELEMETRY ANOMALY DETECTION ENGINE</div>
   </div>
-  <div class="header-right">
-    <div class="status-pill status-live"><div class="pulse"></div>SYSTEM ACTIVE</div>
+  <div class="hright">
+    <div class="pill pill-green"><div class="pulse"></div>MONITORING ACTIVE</div>
+    <div class="pill pill-orange">8 ANOMALIES INJECTED</div>
     <div class="ts" id="clock"></div>
   </div>
 </div>
 
 <div class="main">
 
-  <!-- METRIC CARDS -->
-  <div class="metrics-row">
-    <div class="mcard orange">
-      <div class="mcard-val" style="color:var(--orange)">0.984</div>
-      <div class="mcard-lbl">F1 SCORE</div>
-      <div class="mcard-sub">Detection quality</div>
-    </div>
-    <div class="mcard cyan">
-      <div class="mcard-val" style="color:var(--cyan)">1.000</div>
-      <div class="mcard-lbl">AVG PRECISION</div>
-      <div class="mcard-sub">PR-AUC curve</div>
-    </div>
-    <div class="mcard green">
-      <div class="mcard-val" style="color:var(--green)">0.968</div>
-      <div class="mcard-lbl">RECALL</div>
-      <div class="mcard-sub">True anomaly catch rate</div>
-    </div>
-    <div class="mcard violet">
-      <div class="mcard-val" style="color:var(--violet)">1.000</div>
-      <div class="mcard-lbl">PRECISION</div>
-      <div class="mcard-sub">False alarm rate</div>
-    </div>
-    <div class="mcard red">
-      <div class="mcard-val" style="color:var(--red)">329</div>
-      <div class="mcard-lbl">FLAGGED</div>
-      <div class="mcard-sub">TP 329 · FP 0</div>
-    </div>
-    <div class="mcard amber">
-      <div class="mcard-val" style="color:var(--amber)">18</div>
-      <div class="mcard-lbl">PARAMETERS</div>
-      <div class="mcard-sub">5 subsystems monitored</div>
-    </div>
-  </div>
+<!-- METRIC CARDS -->
+<div class="mrow">
+  <div class="mcard c-o"><div class="mv" style="color:var(--orange)">0.984</div><div class="ml">F1 SCORE</div><div class="ms">Detection quality</div></div>
+  <div class="mcard c-c"><div class="mv" style="color:var(--cyan)">1.000</div><div class="ml">PR-AUC</div><div class="ms">Avg precision</div></div>
+  <div class="mcard c-g"><div class="mv" style="color:var(--green)">0.968</div><div class="ml">RECALL</div><div class="ms">Catch rate</div></div>
+  <div class="mcard c-v"><div class="mv" style="color:var(--violet)">1.000</div><div class="ml">PRECISION</div><div class="ms">Zero false alarms</div></div>
+  <div class="mcard c-r"><div class="mv" style="color:var(--red)">329</div><div class="ml">TRUE POSITIVES</div><div class="ms">FP: 0 · FN: 11</div></div>
+  <div class="mcard c-a"><div class="mv" style="color:var(--amber)">18</div><div class="ml">PARAMETERS</div><div class="ms">5 subsystems</div></div>
+</div>
 
-  <!-- ROW 2: Anomaly Score Timeline + Subsystem Health -->
-  <div class="row2">
-    <div class="panel">
-      <div class="panel-title">ANOMALY SEVERITY TIMELINE</div>
-      <div class="chart-wrap" style="height:220px">
-        <canvas id="timelineChart"></canvas>
-      </div>
-    </div>
-    <div class="panel">
-      <div class="panel-title">SUBSYSTEM HEALTH INDEX</div>
-      <div class="health-grid">
-        
-        <div class="health-item">
-          <div class="health-label">
-            <span class="health-name" style="color:#f97316">power</span>
-            <span class="health-val" style="color:var(--red)">24.0%</span>
-          </div>
-          <div class="health-bar">
-            <div class="health-fill" style="width:24.0%;background:#ef4444"></div>
-          </div>
-        </div>
-        
-        <div class="health-item">
-          <div class="health-label">
-            <span class="health-name" style="color:#ef4444">thermal</span>
-            <span class="health-val" style="color:var(--amber)">53.0%</span>
-          </div>
-          <div class="health-bar">
-            <div class="health-fill" style="width:53.0%;background:#fbbf24"></div>
-          </div>
-        </div>
-        
-        <div class="health-item">
-          <div class="health-label">
-            <span class="health-name" style="color:#a78bfa">attitude</span>
-            <span class="health-val" style="color:var(--amber)">57.7%</span>
-          </div>
-          <div class="health-bar">
-            <div class="health-fill" style="width:57.7%;background:#fbbf24"></div>
-          </div>
-        </div>
-        
-        <div class="health-item">
-          <div class="health-label">
-            <span class="health-name" style="color:#fbbf24">propulsion</span>
-            <span class="health-val" style="color:var(--amber)">54.4%</span>
-          </div>
-          <div class="health-bar">
-            <div class="health-fill" style="width:54.4%;background:#fbbf24"></div>
-          </div>
-        </div>
-        
-        <div class="health-item">
-          <div class="health-label">
-            <span class="health-name" style="color:#22d3ee">comms</span>
-            <span class="health-val" style="color:var(--red)">11.6%</span>
-          </div>
-          <div class="health-bar">
-            <div class="health-fill" style="width:11.6%;background:#ef4444"></div>
-          </div>
-        </div>
-        
-      </div>
-    </div>
-  </div>
-
-  <!-- ROW 3: Training Loss + Score Distribution + Reconstruction Error -->
-  <div class="row3">
-    <div class="panel">
-      <div class="panel-title">TRAINING LOSS CURVE</div>
-      <div class="chart-wrap" style="height:180px">
-        <canvas id="lossChart"></canvas>
-      </div>
-    </div>
-    <div class="panel">
-      <div class="panel-title">SCORE DISTRIBUTION</div>
-      <div class="chart-wrap" style="height:180px">
-        <canvas id="distChart"></canvas>
-      </div>
-    </div>
-    <div class="panel">
-      <div class="panel-title">RECONSTRUCTION ERROR</div>
-      <div class="chart-wrap" style="height:180px">
-        <canvas id="errorChart"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <!-- ANOMALY TABLE -->
+<!-- ROW: Timeline + Health -->
+<div class="r2">
   <div class="panel">
-    <div class="panel-title">TOP ANOMALY EVENTS — EXPLAINABILITY REPORT</div>
-    <table class="anomaly-table">
-      <thead>
-        <tr>
-          <th>RANK</th><th>SAMPLE</th><th>SEVERITY</th><th>STATUS</th>
-          <th>PRIMARY FAULT</th><th>SUBSYSTEM</th><th>CONTRIBUTION</th>
-          <th>SECONDARY FAULT</th>
-        </tr>
-      </thead>
-      <tbody>
-        
-        <tr>
-          <td style="color:var(--muted);font-family:var(--mono)">#01</td>
-          <td style="font-family:var(--mono)">0278</td>
-          <td><span class="sev-badge sev-medium">26.2</span></td>
-          <td style="color:var(--red)">⚠ ANOMALY</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
-          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
-          <td style="font-family:var(--mono);color:var(--orange)">43.3%</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
-        </tr>
-        
-        <tr>
-          <td style="color:var(--muted);font-family:var(--mono)">#02</td>
-          <td style="font-family:var(--mono)">0279</td>
-          <td><span class="sev-badge sev-medium">26.2</span></td>
-          <td style="color:var(--red)">⚠ ANOMALY</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
-          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
-          <td style="font-family:var(--mono);color:var(--orange)">42.6%</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
-        </tr>
-        
-        <tr>
-          <td style="color:var(--muted);font-family:var(--mono)">#03</td>
-          <td style="font-family:var(--mono)">0280</td>
-          <td><span class="sev-badge sev-medium">26.1</span></td>
-          <td style="color:var(--red)">⚠ ANOMALY</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
-          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
-          <td style="font-family:var(--mono);color:var(--orange)">42.0%</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
-        </tr>
-        
-        <tr>
-          <td style="color:var(--muted);font-family:var(--mono)">#04</td>
-          <td style="font-family:var(--mono)">0281</td>
-          <td><span class="sev-badge sev-medium">26.1</span></td>
-          <td style="color:var(--red)">⚠ ANOMALY</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
-          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
-          <td style="font-family:var(--mono);color:var(--orange)">41.3%</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
-        </tr>
-        
-        <tr>
-          <td style="color:var(--muted);font-family:var(--mono)">#05</td>
-          <td style="font-family:var(--mono)">0282</td>
-          <td><span class="sev-badge sev-medium">26.0</span></td>
-          <td style="color:var(--red)">⚠ ANOMALY</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
-          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
-          <td style="font-family:var(--mono);color:var(--orange)">40.8%</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
-        </tr>
-        
-        <tr>
-          <td style="color:var(--muted);font-family:var(--mono)">#06</td>
-          <td style="font-family:var(--mono)">0283</td>
-          <td><span class="sev-badge sev-medium">26.0</span></td>
-          <td style="color:var(--red)">⚠ ANOMALY</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
-          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
-          <td style="font-family:var(--mono);color:var(--orange)">40.1%</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
-        </tr>
-        
-        <tr>
-          <td style="color:var(--muted);font-family:var(--mono)">#07</td>
-          <td style="font-family:var(--mono)">0277</td>
-          <td><span class="sev-badge sev-medium">25.9</span></td>
-          <td style="color:var(--red)">⚠ ANOMALY</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
-          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
-          <td style="font-family:var(--mono);color:var(--orange)">44.0%</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
-        </tr>
-        
-        <tr>
-          <td style="color:var(--muted);font-family:var(--mono)">#08</td>
-          <td style="font-family:var(--mono)">0284</td>
-          <td><span class="sev-badge sev-medium">25.9</span></td>
-          <td style="color:var(--red)">⚠ ANOMALY</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
-          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
-          <td style="font-family:var(--mono);color:var(--orange)">39.4%</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
-        </tr>
-        
-        <tr>
-          <td style="color:var(--muted);font-family:var(--mono)">#09</td>
-          <td style="font-family:var(--mono)">0285</td>
-          <td><span class="sev-badge sev-medium">25.6</span></td>
-          <td style="color:var(--red)">⚠ ANOMALY</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
-          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
-          <td style="font-family:var(--mono);color:var(--orange)">38.9%</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
-        </tr>
-        
-        <tr>
-          <td style="color:var(--muted);font-family:var(--mono)">#10</td>
-          <td style="font-family:var(--mono)">0286</td>
-          <td><span class="sev-badge sev-medium">25.5</span></td>
-          <td style="color:var(--red)">⚠ ANOMALY</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
-          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
-          <td style="font-family:var(--mono);color:var(--orange)">38.5%</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
-        </tr>
-        
-        <tr>
-          <td style="color:var(--muted);font-family:var(--mono)">#11</td>
-          <td style="font-family:var(--mono)">0276</td>
-          <td><span class="sev-badge sev-medium">25.4</span></td>
-          <td style="color:var(--red)">⚠ ANOMALY</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
-          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
-          <td style="font-family:var(--mono);color:var(--orange)">44.3%</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
-        </tr>
-        
-        <tr>
-          <td style="color:var(--muted);font-family:var(--mono)">#12</td>
-          <td style="font-family:var(--mono)">0287</td>
-          <td><span class="sev-badge sev-medium">25.4</span></td>
-          <td style="color:var(--red)">⚠ ANOMALY</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
-          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
-          <td style="font-family:var(--mono);color:var(--orange)">37.6%</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
-        </tr>
-        
-        <tr>
-          <td style="color:var(--muted);font-family:var(--mono)">#13</td>
-          <td style="font-family:var(--mono)">0288</td>
-          <td><span class="sev-badge sev-medium">25.2</span></td>
-          <td style="color:var(--red)">⚠ ANOMALY</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
-          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
-          <td style="font-family:var(--mono);color:var(--orange)">37.2%</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
-        </tr>
-        
-        <tr>
-          <td style="color:var(--muted);font-family:var(--mono)">#14</td>
-          <td style="font-family:var(--mono)">0289</td>
-          <td><span class="sev-badge sev-medium">25.2</span></td>
-          <td style="color:var(--red)">⚠ ANOMALY</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
-          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
-          <td style="font-family:var(--mono);color:var(--orange)">36.7%</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
-        </tr>
-        
-        <tr>
-          <td style="color:var(--muted);font-family:var(--mono)">#15</td>
-          <td style="font-family:var(--mono)">0290</td>
-          <td><span class="sev-badge sev-low">25.0</span></td>
-          <td style="color:var(--red)">⚠ ANOMALY</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--text)">power_power_consumption</td>
-          <td><span class="sub-pill" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span></td>
-          <td style="font-family:var(--mono);color:var(--orange)">35.9%</td>
-          <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">comms_signal_strength</td>
-        </tr>
-        
-      </tbody>
-    </table>
+    <div class="ptitle">ANOMALY SEVERITY TIMELINE</div>
+    <div class="cw" style="height:200px"><canvas id="timelineChart"></canvas></div>
+  </div>
+  <div class="panel">
+    <div class="ptitle">SUBSYSTEM HEALTH INDEX</div>
+    <div class="hg">
+      <div class="hi">
+        <div class="hl"><span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#f97316">power</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--red)">24.0%</span></div>
+        <div class="hb"><div class="hf" style="width:24.0%;background:#ef4444"></div></div>
+      </div><div class="hi">
+        <div class="hl"><span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#ef4444">thermal</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--amber)">53.0%</span></div>
+        <div class="hb"><div class="hf" style="width:53.0%;background:#fbbf24"></div></div>
+      </div><div class="hi">
+        <div class="hl"><span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#a78bfa">attitude</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--amber)">57.7%</span></div>
+        <div class="hb"><div class="hf" style="width:57.7%;background:#fbbf24"></div></div>
+      </div><div class="hi">
+        <div class="hl"><span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#fbbf24">propulsion</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--amber)">54.4%</span></div>
+        <div class="hb"><div class="hf" style="width:54.4%;background:#fbbf24"></div></div>
+      </div><div class="hi">
+        <div class="hl"><span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#22d3ee">comms</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--red)">11.6%</span></div>
+        <div class="hb"><div class="hf" style="width:11.6%;background:#ef4444"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ROW: Loss + Distribution + Error -->
+<div class="r3">
+  <div class="panel">
+    <div class="ptitle">TRAINING LOSS CURVE</div>
+    <div class="cw" style="height:160px"><canvas id="lossChart"></canvas></div>
+  </div>
+  <div class="panel">
+    <div class="ptitle">SCORE DISTRIBUTION</div>
+    <div class="cw" style="height:160px"><canvas id="distChart"></canvas></div>
+  </div>
+  <div class="panel">
+    <div class="ptitle">RECONSTRUCTION ERROR</div>
+    <div class="cw" style="height:160px"><canvas id="errorChart"></canvas></div>
+  </div>
+</div>
+
+<!-- ROW: Operations Log + Failure Modes -->
+<div class="r22">
+  <div class="panel">
+    <div class="ptitle">OPERATIONS EVENT LOG</div>
+    <div class="log-feed">
+      <div class="log-entry log-warn">
+        <div class="log-time">T+37:58:00</div>
+        <div class="log-body">
+          <div class="log-event" style="color:var(--amber)">DRIFT DOWN detected</div>
+          <div class="log-detail">param: tank pressure · subsys: propulsion · duration: 73s</div>
+        </div>
+        <span class="badge bw">WARNING</span>
+      </div><div class="log-entry log-warn">
+        <div class="log-time">T+37:56:00</div>
+        <div class="log-body">
+          <div class="log-event" style="color:var(--amber)">DRIFT DOWN detected</div>
+          <div class="log-detail">param: signal strength · subsys: comms · duration: 63s</div>
+        </div>
+        <span class="badge bw">WARNING</span>
+      </div><div class="log-entry log-crit">
+        <div class="log-time">T+37:56:00</div>
+        <div class="log-body">
+          <div class="log-event" style="color:var(--red)">SPIKE detected</div>
+          <div class="log-detail">param: power consumption · subsys: power · duration: 62s</div>
+        </div>
+        <span class="badge bc">CRITICAL</span>
+      </div><div class="log-entry log-warn">
+        <div class="log-time">T+37:54:00</div>
+        <div class="log-body">
+          <div class="log-event" style="color:var(--amber)">OSCILLATION detected</div>
+          <div class="log-detail">param: rw speed z · subsys: attitude · duration: 60s</div>
+        </div>
+        <span class="badge bw">WARNING</span>
+      </div><div class="log-entry log-crit">
+        <div class="log-time">T+36:07:00</div>
+        <div class="log-body">
+          <div class="log-event" style="color:var(--red)">SPIKE detected</div>
+          <div class="log-detail">param: bit error rate · subsys: comms · duration: 89s</div>
+        </div>
+        <span class="badge bc">CRITICAL</span>
+      </div><div class="log-entry log-warn">
+        <div class="log-time">T+34:41:00</div>
+        <div class="log-body">
+          <div class="log-event" style="color:var(--amber)">DRIFT DOWN detected</div>
+          <div class="log-detail">param: battery soc · subsys: power · duration: 80s</div>
+        </div>
+        <span class="badge bw">WARNING</span>
+      </div><div class="log-entry log-warn">
+        <div class="log-time">T+34:16:00</div>
+        <div class="log-body">
+          <div class="log-event" style="color:var(--amber)">OSCILLATION detected</div>
+          <div class="log-detail">param: rw speed x · subsys: attitude · duration: 69s</div>
+        </div>
+        <span class="badge bw">WARNING</span>
+      </div><div class="log-entry log-warn">
+        <div class="log-time">T+34:15:00</div>
+        <div class="log-body">
+          <div class="log-event" style="color:var(--amber)">DRIFT UP detected</div>
+          <div class="log-detail">param: radiator temp · subsys: thermal · duration: 70s</div>
+        </div>
+        <span class="badge bw">WARNING</span>
+      </div>
+      <div class="log-entry log-info">
+        <div class="log-time">T+00:00:00</div>
+        <div class="log-body"><div class="log-event" style="color:var(--cyan)">SYSTEM BOOT — Telemetry ingestion active</div>
+        <div class="log-detail">18 params · 5 subsystems · LSTM Autoencoder loaded · threshold=0.01557</div></div>
+        <span class="badge bn">INFO</span>
+      </div>
+    </div>
   </div>
 
-  <!-- FEATURE EXPLAINABILITY -->
   <div class="panel">
-    <div class="panel-title">FEATURE CONTRIBUTION ANALYSIS — TOP ANOMALY</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:12px;font-family:var(--mono)">
-      Sample #0278 | Severity: 26.2/100 | LSTM Autoencoder reconstruction error decomposition
-    </div>
-    <div class="feat-bars">
-      
-      <div class="feat-row">
-        <div class="feat-name">power_power_consumption</div>
-        <div class="feat-bar-wrap">
-          <div class="feat-bar-fill" style="width:43.3%;background:#f97316"></div>
+    <div class="ptitle">FAILURE MODE CATALOGUE</div>
+    <div class="fm-grid">
+      <div class="fm-item">
+        <div class="fm-header">
+          <span class="fm-name" style="color:#f97316">POWER</span>
+          <span class="fm-count">3 failure modes</span>
         </div>
-        <div class="feat-pct">43.3%</div>
-        <span class="sub-pill" style="font-size:9px;padding:1px 5px;background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640">power</span>
-      </div>
-      
-      <div class="feat-row">
-        <div class="feat-name">comms_signal_strength</div>
-        <div class="feat-bar-wrap">
-          <div class="feat-bar-fill" style="width:14.8%;background:#22d3ee"></div>
+        <div class="fm-modes">
+          <span class="fm-tag" style="color:#f97316;border-color:#f9731640">Bus voltage spike</span><span class="fm-tag" style="color:#f97316;border-color:#f9731640">Battery SOC drain</span><span class="fm-tag" style="color:#f97316;border-color:#f9731640">Solar dropout</span>
         </div>
-        <div class="feat-pct">14.8%</div>
-        <span class="sub-pill" style="font-size:9px;padding:1px 5px;background:rgba(0,0,0,.3);color:#22d3ee;border:0.5px solid #22d3ee40">comms</span>
-      </div>
-      
-      <div class="feat-row">
-        <div class="feat-name">propulsion_tank_pressure</div>
-        <div class="feat-bar-wrap">
-          <div class="feat-bar-fill" style="width:9.1%;background:#fbbf24"></div>
+      </div><div class="fm-item">
+        <div class="fm-header">
+          <span class="fm-name" style="color:#ef4444">THERMAL</span>
+          <span class="fm-count">2 failure modes</span>
         </div>
-        <div class="feat-pct">9.1%</div>
-        <span class="sub-pill" style="font-size:9px;padding:1px 5px;background:rgba(0,0,0,.3);color:#fbbf24;border:0.5px solid #fbbf2440">propulsion</span>
+        <div class="fm-modes">
+          <span class="fm-tag" style="color:#ef4444;border-color:#ef444440">Panel temp drift</span><span class="fm-tag" style="color:#ef4444;border-color:#ef444440">CPU thermal spike</span>
+        </div>
+      </div><div class="fm-item">
+        <div class="fm-header">
+          <span class="fm-name" style="color:#a78bfa">ATTITUDE</span>
+          <span class="fm-count">2 failure modes</span>
+        </div>
+        <div class="fm-modes">
+          <span class="fm-tag" style="color:#a78bfa;border-color:#a78bfa40">RW oscillation</span><span class="fm-tag" style="color:#a78bfa;border-color:#a78bfa40">Pointing error growth</span>
+        </div>
+      </div><div class="fm-item">
+        <div class="fm-header">
+          <span class="fm-name" style="color:#fbbf24">PROPULSION</span>
+          <span class="fm-count">2 failure modes</span>
+        </div>
+        <div class="fm-modes">
+          <span class="fm-tag" style="color:#fbbf24;border-color:#fbbf2440">Tank pressure drift</span><span class="fm-tag" style="color:#fbbf24;border-color:#fbbf2440">Fuel loss</span>
+        </div>
+      </div><div class="fm-item">
+        <div class="fm-header">
+          <span class="fm-name" style="color:#22d3ee">COMMS</span>
+          <span class="fm-count">2 failure modes</span>
+        </div>
+        <div class="fm-modes">
+          <span class="fm-tag" style="color:#22d3ee;border-color:#22d3ee40">Signal strength degradation</span><span class="fm-tag" style="color:#22d3ee;border-color:#22d3ee40">BER spike</span>
+        </div>
       </div>
-      
     </div>
   </div>
+</div>
+
+<!-- LIVE TELEMETRY STREAM -->
+<div class="panel">
+  <div class="ptitle">LIVE TELEMETRY STREAM — KEY PARAMETERS</div>
+  <div class="telem-grid" id="telemGrid">
+    <div class="telem-row">
+      <div class="telem-name">power bus voltage</div>
+      <canvas class="telem-spark" id="spark_0"></canvas>
+      <div class="telem-val" style="color:#f97316" id="val_0">26.86</div>
+      <div class="telem-status"><span class="badge bn">NOMINAL</span></div>
+    </div><div class="telem-row">
+      <div class="telem-name">thermal cpu temp</div>
+      <canvas class="telem-spark" id="spark_1"></canvas>
+      <div class="telem-val" style="color:#ef4444" id="val_1">53.29</div>
+      <div class="telem-status"><span class="badge bc">ALERT</span></div>
+    </div><div class="telem-row">
+      <div class="telem-name">attitude rw speed x</div>
+      <canvas class="telem-spark" id="spark_2"></canvas>
+      <div class="telem-val" style="color:#a78bfa" id="val_2">916.03</div>
+      <div class="telem-status"><span class="badge bc">ALERT</span></div>
+    </div><div class="telem-row">
+      <div class="telem-name">comms signal strength</div>
+      <canvas class="telem-spark" id="spark_3"></canvas>
+      <div class="telem-val" style="color:#22d3ee" id="val_3">-93.92</div>
+      <div class="telem-status"><span class="badge bc">ALERT</span></div>
+    </div><div class="telem-row">
+      <div class="telem-name">propulsion tank pressure</div>
+      <canvas class="telem-spark" id="spark_4"></canvas>
+      <div class="telem-val" style="color:#fbbf24" id="val_4">214.39</div>
+      <div class="telem-status"><span class="badge bn">NOMINAL</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ANOMALY TABLE -->
+<div class="panel">
+  <div class="ptitle">TOP ANOMALY EVENTS — EXPLAINABILITY REPORT</div>
+  <table class="tbl">
+    <thead><tr><th>RANK</th><th>SAMPLE</th><th>SEVERITY</th><th>STATUS</th><th>PRIMARY FAULT</th><th>SUBSYSTEM</th><th>CONTRIBUTION</th><th>SECONDARY FAULT</th></tr></thead>
+    <tbody>
+      <tr>
+        <td style="color:var(--muted);font-family:var(--mono)">#01</td>
+        <td style="font-family:var(--mono)">0278</td>
+        <td><span class="badge bm">26.2</span></td>
+        <td style="color:var(--red)">ANOMALY</td>
+        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
+        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
+        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">43.3%</td>
+        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
+      </tr><tr>
+        <td style="color:var(--muted);font-family:var(--mono)">#02</td>
+        <td style="font-family:var(--mono)">0279</td>
+        <td><span class="badge bm">26.2</span></td>
+        <td style="color:var(--red)">ANOMALY</td>
+        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
+        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
+        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">42.6%</td>
+        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
+      </tr><tr>
+        <td style="color:var(--muted);font-family:var(--mono)">#03</td>
+        <td style="font-family:var(--mono)">0280</td>
+        <td><span class="badge bm">26.1</span></td>
+        <td style="color:var(--red)">ANOMALY</td>
+        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
+        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
+        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">42.0%</td>
+        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
+      </tr><tr>
+        <td style="color:var(--muted);font-family:var(--mono)">#04</td>
+        <td style="font-family:var(--mono)">0281</td>
+        <td><span class="badge bm">26.1</span></td>
+        <td style="color:var(--red)">ANOMALY</td>
+        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
+        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
+        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">41.3%</td>
+        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
+      </tr><tr>
+        <td style="color:var(--muted);font-family:var(--mono)">#05</td>
+        <td style="font-family:var(--mono)">0282</td>
+        <td><span class="badge bm">26.0</span></td>
+        <td style="color:var(--red)">ANOMALY</td>
+        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
+        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
+        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">40.8%</td>
+        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
+      </tr><tr>
+        <td style="color:var(--muted);font-family:var(--mono)">#06</td>
+        <td style="font-family:var(--mono)">0283</td>
+        <td><span class="badge bm">26.0</span></td>
+        <td style="color:var(--red)">ANOMALY</td>
+        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
+        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
+        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">40.1%</td>
+        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
+      </tr><tr>
+        <td style="color:var(--muted);font-family:var(--mono)">#07</td>
+        <td style="font-family:var(--mono)">0277</td>
+        <td><span class="badge bm">25.9</span></td>
+        <td style="color:var(--red)">ANOMALY</td>
+        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
+        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
+        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">44.0%</td>
+        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
+      </tr><tr>
+        <td style="color:var(--muted);font-family:var(--mono)">#08</td>
+        <td style="font-family:var(--mono)">0284</td>
+        <td><span class="badge bm">25.9</span></td>
+        <td style="color:var(--red)">ANOMALY</td>
+        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
+        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
+        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">39.4%</td>
+        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
+      </tr><tr>
+        <td style="color:var(--muted);font-family:var(--mono)">#09</td>
+        <td style="font-family:var(--mono)">0285</td>
+        <td><span class="badge bm">25.6</span></td>
+        <td style="color:var(--red)">ANOMALY</td>
+        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
+        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
+        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">38.9%</td>
+        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
+      </tr><tr>
+        <td style="color:var(--muted);font-family:var(--mono)">#10</td>
+        <td style="font-family:var(--mono)">0286</td>
+        <td><span class="badge bm">25.5</span></td>
+        <td style="color:var(--red)">ANOMALY</td>
+        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
+        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
+        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">38.5%</td>
+        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
+      </tr><tr>
+        <td style="color:var(--muted);font-family:var(--mono)">#11</td>
+        <td style="font-family:var(--mono)">0276</td>
+        <td><span class="badge bm">25.4</span></td>
+        <td style="color:var(--red)">ANOMALY</td>
+        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
+        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
+        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">44.3%</td>
+        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
+      </tr><tr>
+        <td style="color:var(--muted);font-family:var(--mono)">#12</td>
+        <td style="font-family:var(--mono)">0287</td>
+        <td><span class="badge bm">25.4</span></td>
+        <td style="color:var(--red)">ANOMALY</td>
+        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
+        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
+        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">37.6%</td>
+        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
+      </tr><tr>
+        <td style="color:var(--muted);font-family:var(--mono)">#13</td>
+        <td style="font-family:var(--mono)">0288</td>
+        <td><span class="badge bm">25.2</span></td>
+        <td style="color:var(--red)">ANOMALY</td>
+        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
+        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
+        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">37.2%</td>
+        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
+      </tr><tr>
+        <td style="color:var(--muted);font-family:var(--mono)">#14</td>
+        <td style="font-family:var(--mono)">0289</td>
+        <td><span class="badge bm">25.2</span></td>
+        <td style="color:var(--red)">ANOMALY</td>
+        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
+        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
+        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">36.7%</td>
+        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
+      </tr><tr>
+        <td style="color:var(--muted);font-family:var(--mono)">#15</td>
+        <td style="font-family:var(--mono)">0290</td>
+        <td><span class="badge bn">25.0</span></td>
+        <td style="color:var(--red)">ANOMALY</td>
+        <td style="font-family:var(--mono);font-size:10px">power_power_consumption</td>
+        <td><span class="sp" style="background:rgba(0,0,0,.3);color:#f97316;border:0.5px solid #f9731640;font-size:9px">power</span></td>
+        <td style="font-family:var(--mono);color:var(--orange);font-size:10px">35.9%</td>
+        <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">comms_signal_strength</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- FEATURE EXPLAINABILITY + MISSION TIMELINE -->
+<div class="r22">
+  <div class="panel">
+    <div class="ptitle">FEATURE CONTRIBUTION — TOP ANOMALY</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:10px;font-family:var(--mono)">
+      Sample #0278 · Severity 26.2/100 · LSTM reconstruction decomposition
+    </div>
+    <div class="fb">
+      <div class="fr">
+        <div class="fn">power_power_consumption</div>
+        <div class="fbw"><div class="fbf" style="width:43.3%;background:#f97316"></div></div>
+        <div class="fp">43.3%</div>
+        <span class="sp" style="font-size:8px;padding:1px 5px;color:#f97316;border:0.5px solid #f9731640;background:rgba(0,0,0,.3)">power</span>
+      </div><div class="fr">
+        <div class="fn">comms_signal_strength</div>
+        <div class="fbw"><div class="fbf" style="width:14.8%;background:#22d3ee"></div></div>
+        <div class="fp">14.8%</div>
+        <span class="sp" style="font-size:8px;padding:1px 5px;color:#22d3ee;border:0.5px solid #22d3ee40;background:rgba(0,0,0,.3)">comms</span>
+      </div><div class="fr">
+        <div class="fn">propulsion_tank_pressure</div>
+        <div class="fbw"><div class="fbf" style="width:9.1%;background:#fbbf24"></div></div>
+        <div class="fp">9.1%</div>
+        <span class="sp" style="font-size:8px;padding:1px 5px;color:#fbbf24;border:0.5px solid #fbbf2440;background:rgba(0,0,0,.3)">propulsion</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ptitle">MISSION TIMELINE</div>
+    <div class="cw" style="height:180px"><canvas id="missionChart"></canvas></div>
+  </div>
+</div>
 
 </div>
 
 <div class="footer">
-  ORBITIQ SENTINEL v1.0 · LSTM AUTOENCODER · 18 TELEMETRY PARAMS · 5 SUBSYSTEMS · MAHIN NANDIPA · mahin-nandipa.netlify.app
+  ORBITIQ SENTINEL v1.0 · LSTM AUTOENCODER · F1=0.984 · PRECISION=1.0 · RECALL=0.968 · 18 PARAMS · 5 SUBSYSTEMS · MAHIN NANDIPA
 </div>
 
 <script>
-const scores = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.10000000149011612, 0.10000000149011612, 0.0, 0.0, 0.0, 0.10000000149011612, 0.20000000298023224, 0.30000001192092896, 0.5, 0.6000000238418579, 0.6000000238418579, 0.6000000238418579, 0.5, 0.699999988079071, 1.0, 1.0, 1.0, 1.0, 1.0, 1.399999976158142, 1.399999976158142, 1.600000023841858, 1.7000000476837158, 1.7000000476837158, 1.899999976158142, 2.0, 2.0999999046325684, 2.299999952316284, 2.5, 2.700000047683716, 2.799999952316284, 2.9000000953674316, 3.0999999046325684, 3.5, 3.5999999046325684, 3.799999952316284, 3.799999952316284, 4.0, 4.099999904632568, 4.400000095367432, 4.599999904632568, 5.0, 5.199999809265137, 5.099999904632568, 5.400000095367432, 5.400000095367432, 5.699999809265137, 5.900000095367432, 6.099999904632568, 6.300000190734863, 6.699999809265137, 6.900000095367432, 7.199999809265137, 7.699999809265137, 8.0, 8.399999618530273, 8.699999809265137, 8.899999618530273, 8.899999618530273, 8.800000190734863, 8.800000190734863, 8.899999618530273, 9.0, 9.199999809265137, 9.300000190734863, 9.100000381469727, 9.300000190734863, 9.300000190734863, 9.300000190734863, 9.399999618530273, 9.600000381469727, 9.600000381469727, 9.699999809265137, 9.699999809265137, 9.5, 9.5, 9.699999809265137, 9.899999618530273, 10.0, 9.699999809265137, 9.699999809265137, 9.699999809265137, 9.899999618530273, 9.899999618530273, 10.0, 10.300000190734863, 10.199999809265137, 10.100000381469727, 10.199999809265137, 10.300000190734863, 10.300000190734863, 10.399999618530273, 10.399999618530273, 10.300000190734863, 10.100000381469727, 10.0, 9.899999618530273, 9.699999809265137, 9.600000381469727, 9.199999809265137, 9.5, 9.399999618530273, 9.300000190734863, 9.199999809265137, 9.100000381469727, 9.399999618530273, 9.399999618530273, 9.399999618530273, 9.399999618530273, 9.199999809265137, 9.100000381469727, 9.0, 8.800000190734863, 8.5, 8.300000190734863, 8.100000381469727, 7.900000095367432, 7.900000095367432, 7.900000095367432, 8.100000381469727, 8.199999809265137, 8.300000190734863, 8.399999618530273, 8.600000381469727, 8.699999809265137, 8.899999618530273, 8.899999618530273, 8.800000190734863, 9.0, 8.800000190734863, 8.800000190734863, 8.899999618530273, 9.0, 8.899999618530273, 9.100000381469727, 9.199999809265137, 9.300000190734863, 9.199999809265137, 9.199999809265137, 9.399999618530273, 9.5, 9.399999618530273, 9.199999809265137, 9.199999809265137, 9.199999809265137, 8.899999618530273, 9.0, 9.100000381469727, 9.0, 9.0, 9.100000381469727, 9.100000381469727, 9.0, 8.899999618530273, 9.199999809265137, 9.300000190734863, 9.699999809265137, 9.699999809265137, 10.0, 10.100000381469727, 9.800000190734863, 9.800000190734863, 9.899999618530273, 10.100000381469727, 10.199999809265137, 10.0, 9.800000190734863, 9.800000190734863, 9.699999809265137, 9.899999618530273, 10.0, 9.699999809265137, 9.699999809265137, 9.899999618530273, 9.699999809265137, 9.699999809265137, 9.600000381469727, 9.5, 9.600000381469727, 9.5, 9.5, 9.5, 9.399999618530273, 9.300000190734863, 9.199999809265137, 9.399999618530273, 9.399999618530273, 9.399999618530273, 9.399999618530273, 9.199999809265137, 9.0, 8.800000190734863, 8.600000381469727, 8.5, 8.199999809265137, 8.0, 7.800000190734863, 7.699999809265137, 7.699999809265137, 7.400000095367432, 7.099999904632568, 7.099999904632568, 7.0, 6.800000190734863, 6.599999904632568, 6.599999904632568, 6.400000095367432, 6.099999904632568, 5.900000095367432, 5.900000095367432, 6.199999809265137, 6.400000095367432, 6.5, 6.699999809265137, 6.699999809265137, 6.900000095367432, 6.900000095367432, 7.199999809265137, 7.300000190734863, 7.5, 7.599999904632568, 7.599999904632568, 7.800000190734863, 7.900000095367432, 7.800000190734863, 8.0, 8.199999809265137, 8.399999618530273, 8.600000381469727, 8.699999809265137, 8.899999618530273, 9.199999809265137, 9.300000190734863, 9.5, 9.699999809265137, 10.0, 10.300000190734863, 10.399999618530273, 10.600000381469727, 10.899999618530273, 11.199999809265137, 11.300000190734863, 11.600000381469727, 11.800000190734863, 12.199999809265137, 12.399999618530273, 12.899999618530273, 13.399999618530273, 13.699999809265137, 14.100000381469727, 14.600000381469727, 15.100000381469727, 15.600000381469727, 15.899999618530273, 16.600000381469727, 17.100000381469727, 17.600000381469727, 18.200000762939453, 18.700000762939453, 19.299999237060547, 19.799999237060547, 20.200000762939453, 20.899999618530273, 21.700000762939453, 22.200000762939453, 22.899999618530273, 23.700000762939453, 24.5, 25.399999618530273, 25.899999618530273, 26.200000762939453, 26.200000762939453, 26.100000381469727, 26.100000381469727, 26.0, 26.0, 25.899999618530273, 25.600000381469727, 25.5, 25.399999618530273, 25.200000762939453, 25.200000762939453, 25.0, 25.0, 24.700000762939453, 24.399999618530273, 24.100000381469727, 23.799999237060547, 23.299999237060547, 22.899999618530273, 22.299999237060547, 22.100000381469727, 21.600000381469727, 21.200000762939453, 21.0, 20.399999618530273, 20.0, 19.799999237060547, 19.399999618530273, 19.0, 18.5, 18.299999237060547, 17.899999618530273, 17.600000381469727, 17.0, 16.299999237060547, 15.699999809265137, 15.100000381469727, 14.600000381469727, 14.300000190734863, 13.800000190734863, 13.300000190734863, 12.899999618530273, 12.600000381469727, 12.0, 11.399999618530273, 10.800000190734863, 10.199999809265137, 9.800000190734863, 9.100000381469727, 8.699999809265137, 8.300000190734863, 7.5, 6.900000095367432, 6.300000190734863, 5.599999904632568, 4.800000190734863, 4.099999904632568, 3.299999952316284, 2.5999999046325684, 2.0, 1.600000023841858];
-const errors = [0.014931, 0.014952, 0.015168, 0.015004, 0.015211, 0.015362, 0.015412, 0.01552, 0.01576, 0.015744, 0.015491, 0.015326, 0.015424, 0.015715, 0.015792, 0.016054, 0.016213, 0.016433, 0.016362, 0.016391, 0.016314, 0.016529, 0.016916, 0.016928, 0.016976, 0.016985, 0.017012, 0.017513, 0.017567, 0.017782, 0.017905, 0.017933, 0.018202, 0.018373, 0.018512, 0.018782, 0.019076, 0.019285, 0.019527, 0.01957, 0.019931, 0.020409, 0.020656, 0.02086, 0.020936, 0.021223, 0.021299, 0.021696, 0.022039, 0.022567, 0.022843, 0.022726, 0.023116, 0.0232, 0.023543, 0.023772, 0.024071, 0.024447, 0.024947, 0.025201, 0.02567, 0.026324, 0.026721, 0.027278, 0.027787, 0.028013, 0.028009, 0.027932, 0.027855, 0.028015, 0.028252, 0.028472, 0.028556, 0.028359, 0.028569, 0.028555, 0.028574, 0.028796, 0.029001, 0.029012, 0.029144, 0.029207, 0.028875, 0.028906, 0.029219, 0.029387, 0.029516, 0.02912, 0.02916, 0.029201, 0.029403, 0.029503, 0.029569, 0.03, 0.02988, 0.029793, 0.02986, 0.03, 0.030055, 0.03018, 0.03012, 0.030025, 0.029666, 0.029642, 0.029408, 0.029154, 0.029037, 0.028474, 0.028869, 0.028708, 0.028534, 0.028445, 0.028279, 0.028805, 0.02876, 0.028804, 0.028731, 0.028514, 0.028279, 0.028244, 0.027899, 0.027416, 0.02716, 0.026874, 0.026577, 0.026599, 0.026641, 0.026869, 0.02702, 0.027195, 0.027349, 0.02758, 0.027811, 0.02802, 0.028055, 0.027942, 0.028114, 0.027925, 0.027941, 0.028053, 0.028124, 0.028054, 0.028366, 0.028521, 0.028595, 0.028524, 0.028413, 0.028686, 0.028952, 0.028735, 0.028463, 0.028455, 0.028486, 0.028069, 0.028147, 0.028317, 0.028236, 0.028215, 0.028312, 0.028363, 0.028225, 0.028094, 0.028426, 0.0286, 0.029173, 0.029214, 0.029621, 0.029753, 0.02936, 0.029299, 0.029473, 0.029691, 0.029934, 0.029544, 0.029337, 0.029245, 0.029103, 0.029415, 0.029537, 0.029192, 0.029197, 0.029385, 0.029179, 0.029168, 0.029035, 0.028887, 0.029084, 0.028899, 0.028894, 0.028918, 0.028754, 0.028599, 0.028524, 0.028716, 0.028738, 0.028807, 0.028759, 0.028398, 0.028184, 0.027926, 0.027652, 0.02755, 0.027103, 0.026796, 0.026556, 0.026396, 0.026334, 0.02593, 0.025507, 0.025525, 0.025357, 0.025078, 0.024823, 0.02477, 0.024487, 0.024128, 0.023861, 0.023892, 0.024289, 0.024601, 0.024709, 0.02492, 0.024953, 0.02517, 0.025201, 0.025717, 0.025795, 0.026127, 0.026195, 0.026243, 0.026552, 0.026585, 0.026464, 0.026812, 0.027128, 0.027311, 0.027668, 0.027709, 0.028106, 0.028422, 0.02862, 0.028836, 0.0291, 0.029631, 0.03003, 0.030134, 0.030399, 0.03088, 0.03126, 0.031422, 0.031798, 0.032111, 0.032657, 0.033016, 0.033595, 0.03435, 0.034762, 0.035393, 0.03597, 0.036707, 0.037425, 0.03791, 0.03882, 0.039495, 0.040194, 0.041067, 0.041794, 0.042668, 0.043288, 0.043819, 0.044928, 0.045956, 0.046638, 0.047606, 0.048799, 0.049894, 0.051181, 0.051845, 0.052224, 0.052288, 0.052214, 0.052141, 0.052045, 0.052042, 0.051881, 0.051445, 0.051239, 0.05122, 0.050938, 0.050842, 0.050595, 0.050591, 0.050234, 0.049821, 0.04929, 0.048891, 0.048239, 0.04766, 0.046862, 0.046471, 0.04589, 0.045319, 0.045004, 0.044226, 0.04358, 0.043367, 0.042791, 0.042179, 0.041541, 0.041243, 0.040645, 0.040238, 0.039353, 0.038437, 0.037544, 0.036676, 0.036034, 0.035628, 0.034946, 0.034259, 0.03371, 0.033212, 0.032355, 0.031598, 0.03072, 0.029911, 0.029297, 0.028332, 0.027717, 0.027143, 0.02614, 0.025276, 0.024434, 0.023426, 0.022345, 0.021373, 0.0202, 0.019169, 0.018442, 0.017793];
-const preds  = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
-const labels = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+const scores  = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.10000000149011612, 0.10000000149011612, 0.0, 0.0, 0.0, 0.10000000149011612, 0.20000000298023224, 0.30000001192092896, 0.5, 0.6000000238418579, 0.6000000238418579, 0.6000000238418579, 0.5, 0.699999988079071, 1.0, 1.0, 1.0, 1.0, 1.0, 1.399999976158142, 1.399999976158142, 1.600000023841858, 1.7000000476837158, 1.7000000476837158, 1.899999976158142, 2.0, 2.0999999046325684, 2.299999952316284, 2.5, 2.700000047683716, 2.799999952316284, 2.9000000953674316, 3.0999999046325684, 3.5, 3.5999999046325684, 3.799999952316284, 3.799999952316284, 4.0, 4.099999904632568, 4.400000095367432, 4.599999904632568, 5.0, 5.199999809265137, 5.099999904632568, 5.400000095367432, 5.400000095367432, 5.699999809265137, 5.900000095367432, 6.099999904632568, 6.300000190734863, 6.699999809265137, 6.900000095367432, 7.199999809265137, 7.699999809265137, 8.0, 8.399999618530273, 8.699999809265137, 8.899999618530273, 8.899999618530273, 8.800000190734863, 8.800000190734863, 8.899999618530273, 9.0, 9.199999809265137, 9.300000190734863, 9.100000381469727, 9.300000190734863, 9.300000190734863, 9.300000190734863, 9.399999618530273, 9.600000381469727, 9.600000381469727, 9.699999809265137, 9.699999809265137, 9.5, 9.5, 9.699999809265137, 9.899999618530273, 10.0, 9.699999809265137, 9.699999809265137, 9.699999809265137, 9.899999618530273, 9.899999618530273, 10.0, 10.300000190734863, 10.199999809265137, 10.100000381469727, 10.199999809265137, 10.300000190734863, 10.300000190734863, 10.399999618530273, 10.399999618530273, 10.300000190734863, 10.100000381469727, 10.0, 9.899999618530273, 9.699999809265137, 9.600000381469727, 9.199999809265137, 9.5, 9.399999618530273, 9.300000190734863, 9.199999809265137, 9.100000381469727, 9.399999618530273, 9.399999618530273, 9.399999618530273, 9.399999618530273, 9.199999809265137, 9.100000381469727, 9.0, 8.800000190734863, 8.5, 8.300000190734863, 8.100000381469727, 7.900000095367432, 7.900000095367432, 7.900000095367432, 8.100000381469727, 8.199999809265137, 8.300000190734863, 8.399999618530273, 8.600000381469727, 8.699999809265137, 8.899999618530273, 8.899999618530273, 8.800000190734863, 9.0, 8.800000190734863, 8.800000190734863, 8.899999618530273, 9.0, 8.899999618530273, 9.100000381469727, 9.199999809265137, 9.300000190734863, 9.199999809265137, 9.199999809265137, 9.399999618530273, 9.5, 9.399999618530273, 9.199999809265137, 9.199999809265137, 9.199999809265137, 8.899999618530273, 9.0, 9.100000381469727, 9.0, 9.0, 9.100000381469727, 9.100000381469727, 9.0, 8.899999618530273, 9.199999809265137, 9.300000190734863, 9.699999809265137, 9.699999809265137, 10.0, 10.100000381469727, 9.800000190734863, 9.800000190734863, 9.899999618530273, 10.100000381469727, 10.199999809265137, 10.0, 9.800000190734863, 9.800000190734863, 9.699999809265137, 9.899999618530273, 10.0, 9.699999809265137, 9.699999809265137, 9.899999618530273, 9.699999809265137, 9.699999809265137, 9.600000381469727, 9.5, 9.600000381469727, 9.5, 9.5, 9.5, 9.399999618530273, 9.300000190734863, 9.199999809265137, 9.399999618530273, 9.399999618530273, 9.399999618530273, 9.399999618530273, 9.199999809265137, 9.0, 8.800000190734863, 8.600000381469727, 8.5, 8.199999809265137, 8.0, 7.800000190734863, 7.699999809265137, 7.699999809265137, 7.400000095367432, 7.099999904632568, 7.099999904632568, 7.0, 6.800000190734863, 6.599999904632568, 6.599999904632568, 6.400000095367432, 6.099999904632568, 5.900000095367432, 5.900000095367432, 6.199999809265137, 6.400000095367432, 6.5, 6.699999809265137, 6.699999809265137, 6.900000095367432, 6.900000095367432, 7.199999809265137, 7.300000190734863, 7.5, 7.599999904632568, 7.599999904632568, 7.800000190734863, 7.900000095367432, 7.800000190734863, 8.0, 8.199999809265137, 8.399999618530273, 8.600000381469727, 8.699999809265137, 8.899999618530273, 9.199999809265137, 9.300000190734863, 9.5, 9.699999809265137, 10.0, 10.300000190734863, 10.399999618530273, 10.600000381469727, 10.899999618530273, 11.199999809265137, 11.300000190734863, 11.600000381469727, 11.800000190734863, 12.199999809265137, 12.399999618530273, 12.899999618530273, 13.399999618530273, 13.699999809265137, 14.100000381469727, 14.600000381469727, 15.100000381469727, 15.600000381469727, 15.899999618530273, 16.600000381469727, 17.100000381469727, 17.600000381469727, 18.200000762939453, 18.700000762939453, 19.299999237060547, 19.799999237060547, 20.200000762939453, 20.899999618530273, 21.700000762939453, 22.200000762939453, 22.899999618530273, 23.700000762939453, 24.5, 25.399999618530273, 25.899999618530273, 26.200000762939453, 26.200000762939453, 26.100000381469727, 26.100000381469727, 26.0, 26.0, 25.899999618530273, 25.600000381469727, 25.5, 25.399999618530273, 25.200000762939453, 25.200000762939453, 25.0, 25.0, 24.700000762939453, 24.399999618530273, 24.100000381469727, 23.799999237060547, 23.299999237060547, 22.899999618530273, 22.299999237060547, 22.100000381469727, 21.600000381469727, 21.200000762939453, 21.0, 20.399999618530273, 20.0, 19.799999237060547, 19.399999618530273, 19.0, 18.5, 18.299999237060547, 17.899999618530273, 17.600000381469727, 17.0, 16.299999237060547, 15.699999809265137, 15.100000381469727, 14.600000381469727, 14.300000190734863, 13.800000190734863, 13.300000190734863, 12.899999618530273, 12.600000381469727, 12.0, 11.399999618530273, 10.800000190734863, 10.199999809265137, 9.800000190734863, 9.100000381469727, 8.699999809265137, 8.300000190734863, 7.5, 6.900000095367432, 6.300000190734863, 5.599999904632568, 4.800000190734863, 4.099999904632568, 3.299999952316284, 2.5999999046325684, 2.0, 1.600000023841858];
+const errors  = [0.014931, 0.014952, 0.015168, 0.015004, 0.015211, 0.015362, 0.015412, 0.01552, 0.01576, 0.015744, 0.015491, 0.015326, 0.015424, 0.015715, 0.015792, 0.016054, 0.016213, 0.016433, 0.016362, 0.016391, 0.016314, 0.016529, 0.016916, 0.016928, 0.016976, 0.016985, 0.017012, 0.017513, 0.017567, 0.017782, 0.017905, 0.017933, 0.018202, 0.018373, 0.018512, 0.018782, 0.019076, 0.019285, 0.019527, 0.01957, 0.019931, 0.020409, 0.020656, 0.02086, 0.020936, 0.021223, 0.021299, 0.021696, 0.022039, 0.022567, 0.022843, 0.022726, 0.023116, 0.0232, 0.023543, 0.023772, 0.024071, 0.024447, 0.024947, 0.025201, 0.02567, 0.026324, 0.026721, 0.027278, 0.027787, 0.028013, 0.028009, 0.027932, 0.027855, 0.028015, 0.028252, 0.028472, 0.028556, 0.028359, 0.028569, 0.028555, 0.028574, 0.028796, 0.029001, 0.029012, 0.029144, 0.029207, 0.028875, 0.028906, 0.029219, 0.029387, 0.029516, 0.02912, 0.02916, 0.029201, 0.029403, 0.029503, 0.029569, 0.03, 0.02988, 0.029793, 0.02986, 0.03, 0.030055, 0.03018, 0.03012, 0.030025, 0.029666, 0.029642, 0.029408, 0.029154, 0.029037, 0.028474, 0.028869, 0.028708, 0.028534, 0.028445, 0.028279, 0.028805, 0.02876, 0.028804, 0.028731, 0.028514, 0.028279, 0.028244, 0.027899, 0.027416, 0.02716, 0.026874, 0.026577, 0.026599, 0.026641, 0.026869, 0.02702, 0.027195, 0.027349, 0.02758, 0.027811, 0.02802, 0.028055, 0.027942, 0.028114, 0.027925, 0.027941, 0.028053, 0.028124, 0.028054, 0.028366, 0.028521, 0.028595, 0.028524, 0.028413, 0.028686, 0.028952, 0.028735, 0.028463, 0.028455, 0.028486, 0.028069, 0.028147, 0.028317, 0.028236, 0.028215, 0.028312, 0.028363, 0.028225, 0.028094, 0.028426, 0.0286, 0.029173, 0.029214, 0.029621, 0.029753, 0.02936, 0.029299, 0.029473, 0.029691, 0.029934, 0.029544, 0.029337, 0.029245, 0.029103, 0.029415, 0.029537, 0.029192, 0.029197, 0.029385, 0.029179, 0.029168, 0.029035, 0.028887, 0.029084, 0.028899, 0.028894, 0.028918, 0.028754, 0.028599, 0.028524, 0.028716, 0.028738, 0.028807, 0.028759, 0.028398, 0.028184, 0.027926, 0.027652, 0.02755, 0.027103, 0.026796, 0.026556, 0.026396, 0.026334, 0.02593, 0.025507, 0.025525, 0.025357, 0.025078, 0.024823, 0.02477, 0.024487, 0.024128, 0.023861, 0.023892, 0.024289, 0.024601, 0.024709, 0.02492, 0.024953, 0.02517, 0.025201, 0.025717, 0.025795, 0.026127, 0.026195, 0.026243, 0.026552, 0.026585, 0.026464, 0.026812, 0.027128, 0.027311, 0.027668, 0.027709, 0.028106, 0.028422, 0.02862, 0.028836, 0.0291, 0.029631, 0.03003, 0.030134, 0.030399, 0.03088, 0.03126, 0.031422, 0.031798, 0.032111, 0.032657, 0.033016, 0.033595, 0.03435, 0.034762, 0.035393, 0.03597, 0.036707, 0.037425, 0.03791, 0.03882, 0.039495, 0.040194, 0.041067, 0.041794, 0.042668, 0.043288, 0.043819, 0.044928, 0.045956, 0.046638, 0.047606, 0.048799, 0.049894, 0.051181, 0.051845, 0.052224, 0.052288, 0.052214, 0.052141, 0.052045, 0.052042, 0.051881, 0.051445, 0.051239, 0.05122, 0.050938, 0.050842, 0.050595, 0.050591, 0.050234, 0.049821, 0.04929, 0.048891, 0.048239, 0.04766, 0.046862, 0.046471, 0.04589, 0.045319, 0.045004, 0.044226, 0.04358, 0.043367, 0.042791, 0.042179, 0.041541, 0.041243, 0.040645, 0.040238, 0.039353, 0.038437, 0.037544, 0.036676, 0.036034, 0.035628, 0.034946, 0.034259, 0.03371, 0.033212, 0.032355, 0.031598, 0.03072, 0.029911, 0.029297, 0.028332, 0.027717, 0.027143, 0.02614, 0.025276, 0.024434, 0.023426, 0.022345, 0.021373, 0.0202, 0.019169, 0.018442, 0.017793];
+const preds   = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+const labels  = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 const history = [0.1115, 0.018725, 0.016562, 0.015895, 0.015501, 0.015225, 0.015033, 0.01488, 0.014773, 0.0147, 0.014641, 0.014602, 0.014571, 0.014551, 0.014538, 0.014526, 0.014521, 0.014513, 0.01451, 0.014504, 0.014507, 0.014501, 0.014499, 0.014493, 0.014493, 0.01449, 0.014485, 0.014484, 0.014479, 0.014482, 0.014478, 0.014476, 0.014477, 0.014475, 0.014475, 0.014479, 0.014474, 0.014469, 0.014472, 0.014472, 0.01447, 0.014468, 0.014466, 0.014468, 0.014467, 0.014465, 0.014467, 0.014465, 0.014465, 0.014466];
 const thresh  = 0.015570;
+const telemData = {"power_bus_voltage": [28.68, 27.81, 28.01, 28.16, 27.68, 28.0, 28.0, 27.3, 28.41, 28.24, 27.75, 27.93, 28.2, 27.9, 27.9, 27.42, 28.22, 28.05, 28.11, 27.39, 28.66, 28.06, 27.85, 28.81, 27.98, 27.42, 27.84, 27.08, 28.42, 27.83, 27.7, 28.43, 27.34, 28.21, 27.17, 27.74, 27.52, 28.58, 28.71, 27.87, 28.34, 27.93, 28.23, 27.7, 27.32, 27.28, 28.15, 28.9, 28.11, 27.79, 28.76, 28.09, 25.83, 26.74, 26.38, 26.12, 25.34, 26.42, 26.6, 26.86], "thermal_cpu_temp": [42.61, 42.9, 44.4, 42.64, 48.0, 44.43, 45.22, 47.88, 48.01, 44.57, 45.66, 46.47, 44.61, 41.44, 46.31, 46.79, 45.83, 43.15, 44.61, 43.82, 44.4, 47.59, 48.06, 46.34, 46.1, 46.35, 44.98, 44.85, 43.65, 44.89, 49.52, 46.74, 44.32, 44.06, 43.27, 45.75, 45.78, 42.11, 45.97, 43.86, 47.85, 45.31, 48.44, 44.08, 44.42, 45.6, 47.11, 46.13, 42.53, 45.37, 45.04, 44.14, 54.33, 59.69, 53.88, 54.54, 52.42, 52.89, 52.51, 53.29], "attitude_rw_speed_x": [1168.74, 1212.58, 1135.32, 1090.05, 1205.29, 1119.81, 1082.88, 1222.4, 1157.34, 1229.77, 1168.15, 1132.68, 1125.39, 1169.1, 1183.6, 1150.59, 1183.13, 1107.83, 1200.87, 1092.38, 1188.37, 1241.84, 1265.52, 1302.86, 1106.62, 1245.52, 1272.38, 1258.83, 1144.24, 1224.71, 1311.6, 1110.16, 1228.58, 1266.74, 1158.2, 1234.98, 1135.75, 1151.27, 1150.98, 1211.54, 1194.54, 1257.25, 1143.58, 1192.12, 1257.66, 1233.65, 1120.52, 1239.91, 1171.29, 1223.12, 1218.04, 1273.16, 971.1, 773.04, 840.13, 981.5, 843.33, 1077.97, 936.09, 916.03], "comms_signal_strength": [-83.12, -84.71, -88.37, -82.97, -87.88, -87.69, -85.72, -83.42, -84.4, -83.38, -85.89, -85.34, -87.27, -85.63, -83.81, -85.6, -84.05, -86.15, -86.18, -84.92, -85.39, -83.82, -84.64, -81.52, -85.44, -85.45, -87.08, -84.95, -83.63, -86.48, -85.1, -83.56, -85.25, -86.04, -83.05, -84.81, -84.21, -82.66, -82.71, -85.69, -86.05, -84.43, -85.27, -88.8, -82.45, -84.96, -83.53, -87.35, -82.42, -86.18, -85.22, -87.8, -97.05, -94.38, -95.32, -94.57, -91.54, -94.08, -97.42, -93.92], "propulsion_tank_pressure": [217.35, 220.57, 222.19, 220.09, 219.23, 220.46, 219.25, 220.96, 219.98, 222.09, 220.75, 218.91, 220.91, 221.4, 219.15, 219.36, 216.54, 221.36, 219.12, 216.82, 217.35, 219.67, 221.14, 219.87, 220.71, 218.35, 217.99, 221.33, 220.74, 219.95, 221.92, 218.57, 219.37, 221.54, 222.76, 220.01, 222.52, 219.1, 220.49, 219.74, 217.62, 220.39, 221.4, 219.78, 219.89, 222.09, 218.13, 217.75, 219.02, 218.21, 222.02, 220.46, 210.09, 210.33, 215.64, 210.26, 214.14, 211.83, 215.24, 214.39]};
+const ORANGE='#f97316',CYAN='#00d4ff',GREEN='#22c55e',
+      RED='#ef4444',AMBER='#fbbf24',VIOLET='#a78bfa',MUTED='#7dd3fc';
 
-const ORANGE = '#f97316', CYAN = '#00d4ff', GREEN = '#22c55e',
-      RED = '#ef4444', AMBER = '#fbbf24', MUTED = '#7dd3fc';
-
-const chartDefaults = {
-  responsive: true, maintainAspectRatio: false,
-  plugins: {legend:{display:false}},
-  scales: {
-    x: {display:false},
-    y: {
-      grid: {color:'rgba(26,50,84,.4)'},
-      ticks: {color:MUTED, font:{family:'Space Mono',size:10}},
-      border: {color:'rgba(26,50,84,.6)'}
-    }
+const baseOpts = {
+  responsive:true, maintainAspectRatio:false,
+  plugins:{legend:{display:false}},
+  scales:{
+    x:{display:false},
+    y:{grid:{color:'rgba(26,50,84,.4)'},
+       ticks:{color:MUTED,font:{family:'Space Mono',size:9}},
+       border:{color:'rgba(26,50,84,.5)'}}
   }
 };
 
-// 1. Timeline chart
-const timelineCtx = document.getElementById('timelineChart').getContext('2d');
-new Chart(timelineCtx, {
-  type: 'line',
-  data: {
-    labels: scores.map((_,i)=>i),
-    datasets: [
-      {
-        label: 'Severity Score',
-        data: scores,
-        borderColor: ORANGE,
-        borderWidth: 1.5,
-        pointRadius: 0,
-        fill: true,
-        backgroundColor: 'rgba(249,115,22,.08)',
-        tension: 0.3,
-      },
-      {
-        label: 'Ground Truth',
-        data: labels.map(l => l ? 85 : null),
-        borderColor: RED,
-        borderWidth: 0,
-        pointRadius: 3,
-        pointBackgroundColor: RED,
-        showLine: false,
-      }
-    ]
-  },
-  options: {
-    ...chartDefaults,
-    scales: {
-      ...chartDefaults.scales,
-      x: {display:false},
-      y: {...chartDefaults.scales.y, min:0, max:100,
-           title:{display:true, text:'Severity 0-100', color:MUTED, font:{size:10}}}
-    },
-    plugins: {
-      legend: {display:true, labels:{color:MUTED, font:{size:10, family:'Space Mono'}, boxWidth:10}},
-      annotation: {}
-    }
-  }
+// Timeline
+new Chart(document.getElementById('timelineChart'),{
+  type:'line',
+  data:{labels:scores.map((_,i)=>i),datasets:[
+    {data:scores,borderColor:ORANGE,borderWidth:1.5,pointRadius:0,fill:true,backgroundColor:'rgba(249,115,22,.07)',tension:0.3},
+    {data:labels.map(l=>l?90:null),borderColor:RED,borderWidth:0,pointRadius:2.5,pointBackgroundColor:RED,showLine:false},
+  ]},
+  options:{...baseOpts,plugins:{legend:{display:true,labels:{color:MUTED,font:{size:9,family:'Space Mono'},boxWidth:8}}},
+    scales:{...baseOpts.scales,y:{...baseOpts.scales.y,min:0,max:100}}}
 });
 
-// 2. Loss chart
-const lossCtx = document.getElementById('lossChart').getContext('2d');
-new Chart(lossCtx, {
-  type: 'line',
-  data: {
-    labels: history.map((_,i)=>i+1),
-    datasets: [{
-      data: history,
-      borderColor: CYAN,
-      borderWidth: 1.5,
-      pointRadius: 0,
-      fill: true,
-      backgroundColor: 'rgba(0,212,255,.06)',
-      tension: 0.4,
-    }]
-  },
-  options: {
-    ...chartDefaults,
-    scales: {
-      ...chartDefaults.scales,
-      x: {display:true, ticks:{color:MUTED, font:{family:'Space Mono',size:9}}, grid:{display:false}, border:{color:'rgba(26,50,84,.6)'} },
-    }
-  }
+// Loss
+new Chart(document.getElementById('lossChart'),{
+  type:'line',
+  data:{labels:history.map((_,i)=>i+1),datasets:[
+    {data:history,borderColor:CYAN,borderWidth:1.5,pointRadius:0,fill:true,backgroundColor:'rgba(0,212,255,.05)',tension:0.4}
+  ]},
+  options:{...baseOpts,scales:{x:{display:true,ticks:{color:MUTED,font:{family:'Space Mono',size:8}},grid:{display:false},border:{color:'rgba(26,50,84,.5)'}},y:baseOpts.scales.y}}
 });
 
-// 3. Score distribution (histogram)
-const distCtx = document.getElementById('distChart').getContext('2d');
-const bins = Array.from({length:20}, (_,i) => i*5);
-const normHist = new Array(20).fill(0);
-const anomHist = new Array(20).fill(0);
-scores.forEach((s,i) => {
-  const b = Math.min(19, Math.floor(s/5));
-  if (labels[i]) anomHist[b]++; else normHist[b]++;
-});
-new Chart(distCtx, {
-  type: 'bar',
-  data: {
-    labels: bins.map(b => b+''),
-    datasets: [
-      {label:'Normal', data: normHist, backgroundColor:'rgba(0,212,255,.5)', borderColor:CYAN, borderWidth:1},
-      {label:'Anomaly', data: anomHist, backgroundColor:'rgba(249,115,22,.5)', borderColor:ORANGE, borderWidth:1},
-    ]
-  },
-  options: {
-    ...chartDefaults,
-    plugins:{legend:{display:true, labels:{color:MUTED, font:{size:10,family:'Space Mono'}, boxWidth:10}}},
-    scales:{
-      x:{stacked:true, ticks:{color:MUTED, font:{family:'Space Mono',size:9}}, grid:{display:false}, border:{color:'rgba(26,50,84,.6)'}},
-      y:{stacked:true, grid:{color:'rgba(26,50,84,.4)'}, ticks:{color:MUTED,font:{family:'Space Mono',size:10}}, border:{color:'rgba(26,50,84,.6)'}}
-    },
-  }
+// Distribution
+const bins=Array.from({length:20},(_,i)=>i*5);
+const nh=new Array(20).fill(0),ah=new Array(20).fill(0);
+scores.forEach((s,i)=>{const b=Math.min(19,Math.floor(s/5));if(labels[i])ah[b]++;else nh[b]++;});
+new Chart(document.getElementById('distChart'),{
+  type:'bar',
+  data:{labels:bins.map(b=>b+''),datasets:[
+    {label:'Normal',data:nh,backgroundColor:'rgba(0,212,255,.45)',borderColor:CYAN,borderWidth:1},
+    {label:'Anomaly',data:ah,backgroundColor:'rgba(249,115,22,.45)',borderColor:ORANGE,borderWidth:1},
+  ]},
+  options:{...baseOpts,
+    plugins:{legend:{display:true,labels:{color:MUTED,font:{size:9,family:'Space Mono'},boxWidth:8}}},
+    scales:{x:{stacked:true,ticks:{color:MUTED,font:{family:'Space Mono',size:8}},grid:{display:false},border:{color:'rgba(26,50,84,.5)'}},
+             y:{stacked:true,...baseOpts.scales.y}}}
 });
 
-// 4. Reconstruction error
-const errCtx = document.getElementById('errorChart').getContext('2d');
-new Chart(errCtx, {
-  type: 'line',
-  data: {
-    labels: errors.map((_,i)=>i),
-    datasets: [
-      {
-        data: errors,
-        borderColor: VIOLET='#a78bfa',
-        borderWidth:1,
-        pointRadius:0,
-        fill:true,
-        backgroundColor:'rgba(167,139,250,.07)',
-        tension:0.3,
-      },
-      {
-        data: errors.map(()=>thresh),
-        borderColor: RED,
-        borderWidth: 1,
-        borderDash: [4,4],
-        pointRadius: 0,
-        fill: false,
-      }
-    ]
-  },
-  options: {
-    ...chartDefaults,
-    plugins:{
-      legend:{display:true, labels:{color:MUTED, font:{size:10,family:'Space Mono'}, boxWidth:10}}
-    },
-    scales:{
-      x:{display:false},
-      y:{grid:{color:'rgba(26,50,84,.4)'}, ticks:{color:MUTED,font:{family:'Space Mono',size:10}}, border:{color:'rgba(26,50,84,.6)'},
-          title:{display:true,text:'MSE Error',color:MUTED,font:{size:10}}}
-    }
-  }
+// Error
+new Chart(document.getElementById('errorChart'),{
+  type:'line',
+  data:{labels:errors.map((_,i)=>i),datasets:[
+    {data:errors,borderColor:VIOLET,borderWidth:1,pointRadius:0,fill:true,backgroundColor:'rgba(167,139,250,.06)',tension:0.3},
+    {data:errors.map(()=>thresh),borderColor:RED,borderWidth:1,borderDash:[4,4],pointRadius:0,fill:false},
+  ]},
+  options:{...baseOpts,plugins:{legend:{display:true,labels:{color:MUTED,font:{size:9,family:'Space Mono'},boxWidth:8}}}}
+});
+
+// Mission Timeline — score as bar chart coloured by severity
+const mColors = scores.map(s=>s>75?RED:s>50?ORANGE:s>25?AMBER:GREEN);
+new Chart(document.getElementById('missionChart'),{
+  type:'bar',
+  data:{labels:scores.map((_,i)=>i),datasets:[{data:scores,backgroundColor:mColors,borderWidth:0}]},
+  options:{...baseOpts,scales:{x:{display:false},y:{...baseOpts.scales.y,min:0,max:100,
+    title:{display:true,text:'Severity',color:MUTED,font:{size:9}}}}}
+});
+
+// Sparklines for telemetry
+const telemKeys = Object.keys(telemData);
+const subColors = {power:ORANGE,thermal:RED,attitude:VIOLET,propulsion:AMBER,comms:CYAN};
+telemKeys.forEach((key,i)=>{
+  const sub = key.split('_')[0];
+  const color = subColors[sub]||CYAN;
+  const vals = telemData[key];
+  const ctx = document.getElementById('spark_'+i);
+  if(!ctx) return;
+  new Chart(ctx,{
+    type:'line',
+    data:{labels:vals.map((_,j)=>j),datasets:[{data:vals,borderColor:color,borderWidth:1,pointRadius:0,fill:false,tension:0.3}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},
+      scales:{x:{display:false},y:{display:false}}}
+  });
 });
 
 // Clock
-function updateClock() {
-  document.getElementById('clock').textContent = new Date().toUTCString().replace('GMT','UTC');
-}
-updateClock();
-setInterval(updateClock, 1000);
+function tick(){document.getElementById('clock').textContent=new Date().toUTCString().replace('GMT','UTC');}
+tick(); setInterval(tick,1000);
 </script>
 </body>
 </html>
