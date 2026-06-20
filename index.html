@@ -52,7 +52,7 @@ body{overflow-x:auto;min-width:900px}
 
 /* ── PANEL BASE ── */
 .pnl{background:var(--panel);padding:12px 14px;overflow:hidden;display:flex;flex-direction:column}
-.pnl-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-shrink:0}
+.pnl-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-shrink:0;flex-wrap:wrap;gap:6px}
 .pnl-title{font-size:9px;font-weight:600;letter-spacing:2px;color:var(--muted);font-family:var(--mono);display:flex;align-items:center;gap:6px}
 .pnl-title::before{content:'';width:2px;height:10px;border-radius:1px;background:var(--orange);flex-shrink:0}
 .pnl-badge{font-size:8px;padding:2px 7px;border-radius:8px;font-family:var(--mono);font-weight:700}
@@ -163,7 +163,7 @@ body{overflow-x:auto;min-width:900px}
 
 /* ── MISSION TIMELINE ── */
 .timeline-wrap{position:relative;height:100%}
-.tl-tabs{display:flex;gap:4px;margin-bottom:8px;flex-shrink:0}
+.tl-tabs{display:flex;gap:4px;margin-bottom:0;flex-shrink:0;flex-wrap:nowrap}
 .tl-tab{font-size:9px;padding:3px 10px;border-radius:10px;border:0.5px solid var(--border);color:var(--muted);cursor:pointer;font-family:var(--mono);font-weight:500;background:transparent}
 .tl-tab.active{background:rgba(0,212,255,.08);border-color:rgba(0,212,255,.3);color:var(--cyan)}
 .tl-chart-wrap{flex:1;min-height:0}
@@ -463,7 +463,7 @@ body{overflow-x:auto;min-width:900px}
   </div>
 
   <!-- CONJUNCTION RISK + TIMELINE tabs -->
-  <div class="pnl">
+  <div class="pnl" style="flex:1;min-height:0">
     <div class="pnl-hd">
       <div class="pnl-title">CONJUNCTION RISK & MISSION TIMELINE</div>
       <div class="tl-tabs">
